@@ -17,9 +17,11 @@ interface FormData {
   minimumHeight: number;
   ASCE: string;
   PanelDimensionlength: number;
+  MinSnowLoadUpperLimit: number;
   PanelDimensionwidth: number;
   PanelDimensionweight: number;
-
+  Purlin_Length: number;
+  exposureofRoof: string;
   roofPitch: number;
   roofSlope: number;
   purlinSpan: number;
@@ -116,15 +118,17 @@ const EngineeringInputForm: React.FC = () => {
     meanRoofHeight: 14,
     BuildingWidth: 0.55,
     BuildingLength: 0.85,
+    MinSnowLoadUpperLimit: 20,
     elevation: 5265,
     minimumWidth: 40.08,
     minimumHeight: 13.83,
     ASCE: '7',
+    Purlin_Length: 32.16,
     PanelDimensionlength: 2438,
     PanelDimensionwidth: 1133,
     PanelDimensionweight: 30,
     purlinSpan: 32.16,
-
+    exposureofRoof: "Fully",
     roofPitch: 4.5,
     roofSlope: 6,
     PanelArea: 7.99868792 * 3.71719172,
@@ -174,7 +178,6 @@ const EngineeringInputForm: React.FC = () => {
           : value,
     }));
   };
-
   const handleSubmit = () => {
     console.log(formData);
     alert("Data Submitted");
@@ -202,8 +205,7 @@ const EngineeringInputForm: React.FC = () => {
   const roofFactor =
     Math.max(0.7, 1 - formData.roofSlope / 100);
 
-  const slopedRoofSnow =
-    flatRoofSnow * roofFactor;
+  const SlopeFactor = Math.min(1 - (formData.roofSlope - 15) / 55, 1)
 
   const value = Math.min(formData.minimumWidth * 0.1, formData.minimumWidth * 0.4);
 
@@ -274,6 +276,50 @@ const EngineeringInputForm: React.FC = () => {
 
   // const valuesofc_c = 14.66
   const roofAngle = a; // Dynamic value from API/Formik/etc.
+
+
+  const FlatRoofSnowLoad = (e: string): number => {
+    const factors: Record<string, Record<string, number>> = {
+      B: {
+        Fully: 0.9,
+        Partially: 1.0,
+        Sheltered: 1.2,
+      },
+      C: {
+        Fully: 0.9,
+        Partially: 1.0,
+        Sheltered: 1.1,
+      },
+      D: {
+        Fully: 0.8,
+        Partially: 0.9,
+        Sheltered: 1.0,
+      },
+    };
+    formData.ExposureFactor = factors[formData.exposure]?.[e]
+
+    return factors[formData.exposure]?.[e] ?? 0;
+  };
+
+
+  const MinimumSnowLoad =
+    formData.GroundSnow <= formData.MinSnowLoadUpperLimit
+      ? formData.GroundSnow * formData.ImportanceFactor
+      : formData.MinSnowLoadUpperLimit;
+
+
+  let slopedRoofSnow = 0;
+
+  if (MinimumSnowLoad > FlatRoofSnowLoad(formData.exposureofRoof)) {
+    slopedRoofSnow = SlopeFactor * MinimumSnowLoad;
+  } else {
+    slopedRoofSnow = SlopeFactor * flatRoofSnow;
+  }
+
+
+  // const PurlinUplift=
+
+  // const PurlinDownward=Math.min(F42:F44,F47:F49)
 
 
 
@@ -414,7 +460,6 @@ const EngineeringInputForm: React.FC = () => {
                   </select>
                 </div>
 
-                <div>MM to ft</div>
                 <InputField
                   label="Panel Dimension length (lb)"
                   name="PanelDimensionlength"
@@ -438,6 +483,13 @@ const EngineeringInputForm: React.FC = () => {
                   onChange={handleChange}
                 />
 
+                <InputField
+                  label="Purlin Length"
+                  name="Purlin_Length"
+                  type="number"
+                  value={formData.Purlin_Length}
+                  onChange={handleChange}
+                />
 
                 <InputField
                   label="Roof Pitch (deg)"
@@ -446,13 +498,37 @@ const EngineeringInputForm: React.FC = () => {
                   value={formData.roofPitch}
                   onChange={handleChange}
                 />
-                <InputField
-                  label="Roof Slope"
-                  name="roofSlope"
-                  type="number"
-                  value={formData.roofSlope * 12}
-                  onChange={handleChange}
-                />
+
+                <div className="w-full">
+                  <label className="block text-[11px] font-semibold text-gray-600 mb-1 leading-tight">
+                    Roof Slope
+                  </label>
+
+                  <select
+                    value={formData.roofSlope}
+                    name="roofSlope"
+                    onChange={handleChange}
+                    className="
+      w-full
+      border
+      border-gray-300
+      rounded-md
+      px-2
+      py-1.5
+      text-xs
+      leading-5
+      focus:outline-none
+      focus:ring-2
+      focus:ring-blue-500
+    "
+                  >
+                    {[0, 3, 6, 22.5, 30, 37.5, 45].map((angle) => (
+                      <option key={angle} value={angle}>
+                        {angle}
+                      </option>
+                    ))}
+                  </select>
+                </div>
 
                 <InputField
                   label="Purlin Spacing (ft)"
@@ -514,13 +590,7 @@ const EngineeringInputForm: React.FC = () => {
                   onChange={handleChange}
                 />
 
-                <InputField
-                  label="Exposure Factor"
-                  name="ExposureFactor"
-                  type="number"
-                  value={formData.ExposureFactor}
-                  onChange={handleChange}
-                />
+
 
                 <InputField
                   label="Thermal Factor"
@@ -537,8 +607,42 @@ const EngineeringInputForm: React.FC = () => {
                   value={formData.ImportanceFactor}
                   onChange={handleChange}
                 />
+                <InputField
+                  label="Min Snow Load Upper Limit"
+                  name="MinSnowLoadUpperLimit"
+                  type="number"
+                  value={formData.MinSnowLoadUpperLimit}
+                  onChange={handleChange}
+                />
 
+                <div className="w-full">
+                  <label className="block text-[11px] font-semibold text-gray-600 mb-1 leading-tight">
+                    Exposure of Roof
+                  </label>
 
+                  <select
+                    value={formData.exposureofRoof}
+                    name="exposureofRoof"
+                    onChange={handleChange}
+                    className="
+      w-full
+      border
+      border-gray-300
+      rounded-md
+      px-2
+      py-1.5
+      text-xs
+      leading-5
+      focus:outline-none
+      focus:ring-2
+      focus:ring-blue-500
+    "
+                  >
+                    <option value="Fully">Fully</option>
+                    <option value="Partially">Partially</option>
+                    <option value="Sheltered">Sheltered</option>
+                  </select>
+                </div>
               </div>
             </SectionCard>
 
@@ -718,8 +822,9 @@ const EngineeringInputForm: React.FC = () => {
                 />
               </div>
             </SectionCard>
-            <SectionCard title="Snow Load ">
-              <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
+            <SectionCard
+              title='Snow Load'
+            >              <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
 
 
                 <InputField
@@ -727,36 +832,37 @@ const EngineeringInputForm: React.FC = () => {
                   name="flatRoofSnow"
                   value={flatRoofSnow.toFixed(2)}
                 />
+                <InputField
+                  label="ExposureFactor"
+                  name="ExposureFactor"
+                  value={FlatRoofSnowLoad(formData.exposureofRoof)}
+                />
+
+                <InputField
+                  label="Minimum Snow Load"
+                  name="MinimumSnowLoad"
+                  value={MinimumSnowLoad.toFixed(2)}
+                />
+
+
+                <InputField
+                  label="Slope Factor"
+                  name="SlopeFactor"
+                  value={SlopeFactor.toFixed(2)}
+                />
 
                 <InputField
                   label="Sloped Roof Snow"
                   name="slopedRoofSnow"
                   value={slopedRoofSnow.toFixed(2)}
                 />
-                <InputField
-                  label="Velocity Pressure"
-                  name="VelocityPressure"
-                  value={VelocityPressure.toFixed(2)}
-                />
-
-
-
-                <InputField
-                  label="A"
-                  name="a"
-                  value={a.toFixed(2)}
-                />
-
-                <InputField
-                  label="Trib Area"
-                  name="TribArea"
-                  value={TribArea.toFixed(2)}
-                />
-                <InputField
-                  label="Area"
-                  name="Area"
-                  value={Area}
-                />
+                <div className="flex justify-end items-end mt-4">
+                  <div className="text-sm font-medium">
+                    {MinimumSnowLoad > FlatRoofSnowLoad(formData.exposureofRoof)
+                      ? "Min Governs"
+                      : "Use PFF"}
+                  </div>
+                </div>
               </div>
             </SectionCard>
 
@@ -766,6 +872,75 @@ const EngineeringInputForm: React.FC = () => {
 
           </aside>
         </div>
+        <br />
+
+        <SectionCard title="Carport Wind">
+          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
+
+            <InputField
+              label="Velocity Pressure"
+              name="VelocityPressure"
+              value={VelocityPressure.toFixed(2)}
+            />
+
+
+
+            <InputField
+              label="A"
+              name="a"
+              value={a.toFixed(2)}
+            />
+
+            <InputField
+              label="Trib Area"
+              name="TribArea"
+              value={TribArea.toFixed(2)}
+            />
+            <InputField
+              label="Area"
+              name="Area"
+              value={Area}
+            />
+          </div>
+        </SectionCard>
+        <br />
+        <SectionCard title="Steel Purlin Design">
+          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
+            <InputField
+              label="Span"
+              name="Span"
+              value={formData.Purlin_Length}
+            />
+            <InputField
+              label="Over Hang"
+              name="Over"
+              value={formData.purlinOverhangLength}
+            />
+            <InputField
+              label="Trib Width"
+              name="Trib"
+              value={formData.purlinTribWidth}
+            />
+            <InputField
+              label="Angle"
+              name="Angle"
+              value={formData.roofSlope}
+            />
+            {/* <InputField
+              label="DownWard"
+              name="Downward"
+              value={PurlinDownward}
+            />
+
+  <InputField
+              label="Uplift"
+              name="Uplift"
+              value={PurlinUplift}
+            /> */}
+
+
+          </div>
+        </SectionCard>
         <br />
         <CarportMWFRSCalculator qh={valuesofc_c} cnAngle={roofAngle} areaIdx={areaValue} />
         {/* qh={valuesofc_c} roofAngle={roofAngle} areaIndex={areaValue} */}

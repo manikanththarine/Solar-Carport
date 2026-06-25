@@ -994,7 +994,6 @@ export default function CarportMWFRSCalculator({ qh, cnAngle, areaIdx }: { qh: a
 
   // Section 2 — Wind lookup
   const windAngle = cnAngle;
-  console.log(windAngle)
 
   const qhN = useMemo(() => parseFloat(qh) || 0, [qh]);
   const gN = useMemo(() => parseFloat(g) || 0, [g]);
