@@ -660,7 +660,7 @@ const CN_DATA: Record<FlowType, AngleGroup[]> = {
 
 const WIND_DATA: WindData = {
   clearGamma0: [
-    // { angle: 0, rows: [{ loadCase: "A", cnw: 1.2, cnl: 0.3 }, { loadCase: "B", cnw: -1.1, cnl: -0.1 }] },
+    { angle: 0, rows: [{ loadCase: "A", cnw: 1.2, cnl: 0.3 }, { loadCase: "B", cnw: -1.1, cnl: -0.1 }] },
     // { angle: 2.5, rows: [{ loadCase: "A", cnw: 0, cnl: -0.57 }, { loadCase: "B", cnw: -1.3, cnl: -0.03 }] },
     { angle: 7.5, rows: [{ loadCase: "A", cnw: -0.6, cnl: -1.0 }, { loadCase: "B", cnw: -1.4, cnl: 0.0 }] },
     // { angle: 10, rows: [{ loadCase: "A", cnw: -0.7, cnl: -1.1 }, { loadCase: "B", cnw: -1.57, cnl: 0.0 }] },
@@ -671,7 +671,7 @@ const WIND_DATA: WindData = {
     { angle: 45, rows: [{ loadCase: "A", cnw: -1.6, cnl: -1.8 }, { loadCase: "B", cnw: -2.3, cnl: -0.7 }] },
   ],
   clearGamma180: [
-    // { angle: 0, rows: [{ loadCase: "A", cnw: 1.2, cnl: 0.3 }, { loadCase: "B", cnw: -1.1, cnl: -0.1 }] },
+    { angle: 0, rows: [{ loadCase: "A", cnw: 1.2, cnl: 0.3 }, { loadCase: "B", cnw: -1.1, cnl: -0.1 }] },
     // { angle: 2.5, rows: [{ loadCase: "A", cnw: 1.0, cnl: 1.1 }, { loadCase: "B", cnw: 0.7, cnl: 0.17 }] },
     { angle: 7.5, rows: [{ loadCase: "A", cnw: 0.9, cnl: 1.5 }, { loadCase: "B", cnw: 1.6, cnl: 0.3 }] },
     // { angle: 10, rows: [{ loadCase: "A", cnw: 1.03, cnl: 1.53 }, { loadCase: "B", cnw: 1.67, cnl: 0.4 }] },
@@ -682,7 +682,7 @@ const WIND_DATA: WindData = {
     { angle: 45, rows: [{ loadCase: "A", cnw: 2.2, cnl: 2.5 }, { loadCase: "B", cnw: 2.6, cnl: 1.4 }] },
   ],
   obsGamma0: [
-    // { angle: 0, rows: [{ loadCase: "A", cnw: -0.5, cnl: -1.2 }, { loadCase: "B", cnw: -1.1, cnl: -0.6 }] },
+    { angle: 0, rows: [{ loadCase: "A", cnw: -0.5, cnl: -1.2 }, { loadCase: "B", cnw: -1.1, cnl: -0.6 }] },
     // { angle: 2.5, rows: [{ loadCase: "A", cnw: -0.83, cnl: -1.4 }, { loadCase: "B", cnw: -1.5, cnl: -0.73 }] },
     { angle: 7.5, rows: [{ loadCase: "A", cnw: -1.0, cnl: -1.5 }, { loadCase: "B", cnw: -1.7, cnl: -0.8 }] },
     // { angle: 10, rows: [{ loadCase: "A", cnw: -1.03, cnl: -1.5 }, { loadCase: "B", cnw: -1.83, cnl: -0.73 }] },
@@ -693,7 +693,7 @@ const WIND_DATA: WindData = {
     { angle: 45, rows: [{ loadCase: "A", cnw: -1.3, cnl: -1.8 }, { loadCase: "B", cnw: -1.9, cnl: -1.2 }] },
   ],
   obsGamma180: [
-    // { angle: 0, rows: [{ loadCase: "A", cnw: -0.5, cnl: -1.2 }, { loadCase: "B", cnw: -1.1, cnl: -0.6 }] },
+    { angle: 0, rows: [{ loadCase: "A", cnw: -0.5, cnl: -1.2 }, { loadCase: "B", cnw: -1.1, cnl: -0.6 }] },
     // { angle: 2.5, rows: [{ loadCase: "A", cnw: -0.3, cnl: -1.2 }, { loadCase: "B", cnw: 0.17, cnl: -0.4 }] },
     { angle: 7.5, rows: [{ loadCase: "A", cnw: -0.2, cnl: -1.2 }, { loadCase: "B", cnw: 0.8, cnl: -0.3 }] },
     //  { angle: 10, rows: [{ loadCase: "A", cnw: 0.0, cnl: -1.17 }, { loadCase: "B", cnw: 0.93, cnl: -0.3 }] },
@@ -710,7 +710,7 @@ const WIND_DATA: WindData = {
 // ══════════════════════════════════════════════════════════════════
 
 const TABLE_ANGLES_CN = [0, 7.5, 10, 15, 30, 45];
-const TABLE_ANGLES_WIND = [7.5, 15, 22.5, 30, 37.5, 45];
+const TABLE_ANGLES_WIND = [0,7.5, 15, 22.5, 30, 37.5, 45];
 
 const AREA_LABELS: Record<0 | 1 | 2, string> = { 0: "≤ a²", 1: "> a², ≤ 4.0 a²", 2: "> 4.0 a²" };
 const AREA_OPTIONS = [
@@ -758,6 +758,16 @@ function lookupPressures(flow: FlowType, angle: number, aIdx: 0 | 1 | 2, qh: num
 
 // MWFRS wind lookup — interpolate CNW/CNL then multiply by qh*G
 function interpWindGroup(groups: WindAngleGroup[], angle: number, qh: number, g: number): WindLookupRow[] {
+  // Below 7.5° use the 0° row directly (table entries below 7.5° not interpolated)
+  if (angle < 7.5) {
+    const zeroGroup = groups.find(grp => grp.angle === 0);
+    if (zeroGroup) {
+      return (["A", "B"] as const).map(lc => {
+        const r = zeroGroup.rows.find(row => row.loadCase === lc)!;
+        return { loadCase: `Load Case ${lc}`, cnw: r.cnw, cnl: r.cnl, pW: qh * g * r.cnw, pL: qh * g * r.cnl };
+      });
+    }
+  }
   const { lower, upper, t } = bracketAngle(groups, angle);
   return (["A", "B"] as const).map(lc => {
     const lRow = lower.rows.find(r => r.loadCase === lc)!;

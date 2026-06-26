@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import CarportMWFRSCalculator from "./CarportMWFRSCalculator";
+import { generateStructuralPDF } from "./generateStructuralPDF";
 
 export type AreaType = "≤ a²" | "> a², ≤ 4.0 a²" | "> 4.0 a²";
 // Style constants (match your existing accent colors)
@@ -383,6 +384,10 @@ const EngineeringInputForm: React.FC = () => {
     { label: "W", psf: W, plf: +(W * tribWidth).toFixed(2) },
     { label: "E", psf: E, plf: +(E * tribWidth).toFixed(2) },
   ];
+
+  const handleprint = () => {
+    generateStructuralPDF(formData, { areaIdx: areaValue });
+  };
 
   return (
     <div className="min-h-screen bg-gray-100 text-[13px] text-gray-700">
@@ -832,8 +837,10 @@ const EngineeringInputForm: React.FC = () => {
                 text-white
                 hover:bg-gray-700
               "
+                onClick={handleprint}
+
               >
-                Reset
+                Print
               </button>
 
               <button
@@ -1050,9 +1057,9 @@ const EngineeringInputForm: React.FC = () => {
               <thead>
                 <tr style={{ background: "#f9fafb" }}>
                   <th style={{ ...thBase, textAlign: "left", paddingLeft: "14px" }}>Load</th>
-                  <th style={{...thBase,textAlign: "center"}}>psf</th>
-                  <th style={{...thBase,textAlign: "center"}}>× {tribWidth} ft</th>
-                  <th style={{ ...thBase, borderRight: "none",textAlign: "center" }}>plf</th>
+                  <th style={{ ...thBase, textAlign: "center" }}>psf</th>
+                  <th style={{ ...thBase, textAlign: "center" }}>× {tribWidth} ft</th>
+                  <th style={{ ...thBase, borderRight: "none", textAlign: "center" }}>plf</th>
                 </tr>
               </thead>
               <tbody>
