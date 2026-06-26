@@ -2,8 +2,34 @@ import React, { useState } from "react";
 import CarportMWFRSCalculator from "./CarportMWFRSCalculator";
 
 export type AreaType = "≤ a²" | "> a², ≤ 4.0 a²" | "> 4.0 a²";
+// Style constants (match your existing accent colors)
+const accentBg = "#eff6ff";
+const accentBorder = "#bfdbfe";
+const accentText = "#1d4ed8";
 
+const thBase: React.CSSProperties = {
+  padding: "8px 14px",
+  fontSize: "11px",
+  fontWeight: 700,
+  color: "#6b7280",
+  textAlign: "right",
+  borderBottom: "1px solid #e5e7eb",
+  borderRight: "1px solid #e5e7eb",
+  whiteSpace: "nowrap",
+};
+
+const tdBase: React.CSSProperties = {
+  padding: "8px 14px",
+  fontSize: "12px",
+  borderBottom: "1px solid #dddfe4",
+  borderRight: "1px solid #dddfe4",
+  textAlign: "right",
+};
 interface FormData {
+  sitename: string;
+  project_name: string;
+  engineer_name: string;
+  date: string;
   v3s: number;
   exposure: string;
   kzt: number;
@@ -111,6 +137,10 @@ const SectionCard = ({
 
 const EngineeringInputForm: React.FC = () => {
   const [formData, setFormData] = useState<FormData>({
+    sitename: "",
+    project_name: "",
+    engineer_name: "",
+    date: "",
     v3s: 98,
     exposure: "B",
     kzt: 1,
@@ -264,7 +294,6 @@ const EngineeringInputForm: React.FC = () => {
 
   const Kz = 2.01 * (z / zg) ** (2 / alpha);
 
-  console.log(Kz);
   // z = MAX(h, 15)
   // z = 15 ft
   // Kz = 2.01 × (z / Zg) ^ (2 / α)
@@ -320,10 +349,40 @@ const EngineeringInputForm: React.FC = () => {
   // const PurlinUplift=
 
   // const PurlinDownward=Math.min(F42:F44,F47:F49)
+  // Load values (psf)
+  const D = totalDeadLoad * formData.purlinTribWidth;                    // Dead Load = 2.5 psf
+  const Lr = 20;                              // Live Load Roof = 20 psf (constant per ASCE)
+  const LiveLoadFloor = 0;                    // Live Load Floor = 0 psf (carport)
+  const S = slopedRoofSnow * formData.purlinTribWidth;;                   // Snow Load = 20 psf
+
+  // Wind Load (Downward & Uplift) from MWFRS
+  const W_downward = valuesofc_c;             // Wind Load Downward = +16 psf
+  const W_uplift = -valuesofc_c;             // Wind Load Uplift = -16 psf
+
+  // Linear loads on purlin (psf × trib width)
+  const wD = D * formData.purlinTribWidth;
+  const wLr = Lr * formData.purlinTribWidth;
+  const wS = S * formData.purlinTribWidth;
+  const wW_down = W_downward * formData.purlinTribWidth;
+  const wW_up = W_uplift * formData.purlinTribWidth;
 
 
+  // Add these calculations near your other load calcs
+  const L = 0;
 
+  const W = valuesofc_c;
+  const E = 0;
 
+  const tribWidth = formData.purlinTribWidth;
+
+  const loads = [
+    { label: "D", psf: D, plf: +(D * tribWidth).toFixed(2) },
+    { label: "L", psf: L, plf: +(L * tribWidth).toFixed(2) },
+    { label: "Lr", psf: Lr, plf: +(Lr * tribWidth).toFixed(2) },
+    { label: "S", psf: S, plf: +(S * tribWidth).toFixed(2) },
+    { label: "W", psf: W, plf: +(W * tribWidth).toFixed(2) },
+    { label: "E", psf: E, plf: +(E * tribWidth).toFixed(2) },
+  ];
 
   return (
     <div className="min-h-screen bg-gray-100 text-[13px] text-gray-700">
@@ -343,10 +402,31 @@ const EngineeringInputForm: React.FC = () => {
               <div className="grid grid-cols-1 gap-3">
 
                 <InputField
-                  label="V3s (mph)"
-                  name="v3s"
-                  type="number"
-                  value={formData.v3s}
+                  label="Site Name"
+                  name="sitename"
+                  type="string"
+                  value={formData.sitename}
+                  onChange={handleChange}
+                />
+                <InputField
+                  label="Project Name"
+                  name="project_name"
+                  type="string"
+                  value={formData.project_name}
+                  onChange={handleChange}
+                />
+                <InputField
+                  label="Engineer Name"
+                  name="engineer_name"
+                  type="string"
+                  value={formData.engineer_name}
+                  onChange={handleChange}
+                />
+                <InputField
+                  label="Date"
+                  name="date"
+                  type="date"
+                  value={formData.date}
                   onChange={handleChange}
                 />
 
@@ -454,21 +534,21 @@ const EngineeringInputForm: React.FC = () => {
       focus:ring-blue-500
     "
                   >
-                    <option value="6">ASCE 6</option>
-                    <option value="7">ASCE 7</option>
-                    <option value="16">ASCE 16</option>
+                    <option value="10">7-10</option>
+                    <option value="16">7-16</option>
+                    <option value="22">7-22</option>
                   </select>
                 </div>
 
                 <InputField
-                  label="Panel Dimension length (lb)"
+                  label="Panel Dimension length (mm)"
                   name="PanelDimensionlength"
                   type="number"
                   value={formData.PanelDimensionlength}
                   onChange={handleChange}
                 />
                 <InputField
-                  label="Panel Dimension width (lb)"
+                  label="Panel Dimension width (mm)"
                   name="PanelDimensionwidth"
                   type="number"
                   value={formData.PanelDimensionwidth}
@@ -926,6 +1006,19 @@ const EngineeringInputForm: React.FC = () => {
               name="Angle"
               value={formData.roofSlope}
             />
+            <InputField label="Dead Load D (psf)" name="D" value={D.toFixed(2)} />
+            <InputField label="Live Load Floor (psf)" name="Lf" value={"0.00"} />
+            <InputField label="Live Load Roof Lr (psf)" name="Lr" value={"20.00"} />
+            <InputField label="Snow Load S (psf)" name="S" value={S.toFixed(2)} />
+            <InputField label="Wind Load W Downward (psf)" name="W_down" value={W_downward.toFixed(2)} />
+            <InputField label="Wind Load W Uplift (psf)" name="W_up" value={W_uplift.toFixed(2)} />
+
+            {/* Linear loads = psf × Trib Width */}
+            <InputField label="wD = D × Trib (plf)" name="wD" value={wD.toFixed(2)} />
+            <InputField label="wLr = Lr × Trib (plf)" name="wLr" value={wLr.toFixed(2)} />
+            <InputField label="wS = S × Trib (plf)" name="wS" value={wS.toFixed(2)} />
+            <InputField label="wW Downward (plf)" name="wW_down" value={wW_down.toFixed(2)} />
+            <InputField label="wW Uplift (plf)" name="wW_up" value={wW_up.toFixed(2)} />
             {/* <InputField
               label="DownWard"
               name="Downward"
@@ -942,7 +1035,71 @@ const EngineeringInputForm: React.FC = () => {
           </div>
         </SectionCard>
         <br />
-        <CarportMWFRSCalculator qh={valuesofc_c} cnAngle={roofAngle} areaIdx={areaValue} />
+        <SectionCard title="Convert Area Loads to Line Loads" >
+          <div style={{
+            flex: "1 1 280px",
+            border: `1px solid ${accentBorder}`,
+            borderRadius: "10px",
+            overflow: "hidden",
+            marginBottom: "16px"
+          }}>
+
+
+            {/* Table */}
+            <table style={{ borderCollapse: "collapse", width: "100%" }}>
+              <thead>
+                <tr style={{ background: "#f9fafb" }}>
+                  <th style={{ ...thBase, textAlign: "left", paddingLeft: "14px" }}>Load</th>
+                  <th style={{...thBase,textAlign: "center"}}>psf</th>
+                  <th style={{...thBase,textAlign: "center"}}>× {tribWidth} ft</th>
+                  <th style={{ ...thBase, borderRight: "none",textAlign: "center" }}>plf</th>
+                </tr>
+              </thead>
+              <tbody>
+                {loads.map(({ label, psf, plf }, i) => (
+                  <tr key={label} style={{ background: i % 2 === 0 ? "#fff" : "#fafafa" }}>
+                    {/* Load label */}
+                    <td style={{
+                      ...tdBase,
+                      fontWeight: 600,
+                      color: "#374151",
+                      background: "#f3f4f6",
+                      textAlign: "left",
+                      paddingLeft: "14px",
+                    }}>
+                      {label}
+                    </td>
+
+                    {/* psf */}
+                    <td style={{ ...tdBase, textAlign: "center", color: "#374151" }}>
+                      {psf.toFixed(1)}
+                    </td>
+
+                    {/* × trib width */}
+                    <td style={{ ...tdBase, textAlign: "center", color: "#9ca3af" }}>
+                      ×{tribWidth}
+                    </td>
+
+                    {/* plf — highlighted */}
+                    <td style={{
+                      ...tdBase,
+                      borderRight: "none",
+                      textAlign: "center",
+                      fontWeight: 700,
+                      color: accentText,
+                    }}>
+                      {plf}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+        </SectionCard>
+
+        <br />
+        <CarportMWFRSCalculator qh={valuesofc_c} cnAngle={roofAngle} areaIdx={areaValue} ke={ke} kz={Kz} />
         {/* qh={valuesofc_c} roofAngle={roofAngle} areaIndex={areaValue} */}
 
         <br />

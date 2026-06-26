@@ -638,7 +638,6 @@ interface WindLookupResult {
 const CN_DATA: Record<FlowType, AngleGroup[]> = {
   obstructed: [
     { angle: 0, rows: [{ areaIndex: 0, z3p: 1, z3n: -3.6, z2p: 0.8, z2n: -1.8, z1p: 0.5, z1n: -1.2 }, { areaIndex: 1, z3p: 0.8, z3n: -1.8, z2p: 0.8, z2n: -1.8, z1p: 0.5, z1n: -1.2 }, { areaIndex: 2, z3p: 0.5, z3n: -1.2, z2p: 0.5, z2n: -1.2, z1p: 0.5, z1n: -1.2 }] },
-    { angle: 6, rows: [{ areaIndex: 0, z3p: 1.48, z3n: -4.8, z2p: 1.12, z2n: -2.44, z1p: 0.74, z1n: -1.6 }, { areaIndex: 1, z3p: 1.12, z3n: -2.44, z2p: 1.12, z2n: -2.44, z1p: 0.74, z1n: -1.6 }, { areaIndex: 2, z3p: 0.74, z3n: -1.6, z2p: 0.74, z2n: -1.6, z1p: 0.74, z1n: -1.6 }] },
     { angle: 7.5, rows: [{ areaIndex: 0, z3p: 1.6, z3n: -5.1, z2p: 1.2, z2n: -2.6, z1p: 0.8, z1n: -1.7 }, { areaIndex: 1, z3p: 1.2, z3n: -2.6, z2p: 1.2, z2n: -2.6, z1p: 0.8, z1n: -1.7 }, { areaIndex: 2, z3p: 0.8, z3n: -1.7, z2p: 0.8, z2n: -1.7, z1p: 0.8, z1n: -1.7 }] },
     { angle: 10, rows: [{ areaIndex: 0, z3p: 1.87, z3n: -4.8, z2p: 1.4, z2n: -2.8, z1p: 0.93, z1n: -1.83 }, { areaIndex: 1, z3p: 1.4, z3n: -2.8, z2p: 1.4, z2n: -2.8, z1p: 0.93, z1n: -1.83 }, { areaIndex: 2, z3p: 0.93, z3n: -1.83, z2p: 0.93, z2n: -1.83, z1p: 0.93, z1n: -1.83 }] },
     { angle: 15, rows: [{ areaIndex: 0, z3p: 2.4, z3n: -4.2, z2p: 1.8, z2n: -3.2, z1p: 1.2, z1n: -2.1 }, { areaIndex: 1, z3p: 1.8, z3n: -3.2, z2p: 1.8, z2n: -3.2, z1p: 1.2, z1n: -2.1 }, { areaIndex: 2, z3p: 1.2, z3n: -2.1, z2p: 1.2, z2n: -2.1, z1p: 1.2, z1n: -2.1 }] },
@@ -647,7 +646,6 @@ const CN_DATA: Record<FlowType, AngleGroup[]> = {
   ],
   clear: [
     { angle: 0, rows: [{ areaIndex: 0, z3p: 2.4, z3n: -3.3, z2p: 1.8, z2n: -1.7, z1p: 1.2, z1n: -1.1 }, { areaIndex: 1, z3p: 1.8, z3n: -1.7, z2p: 1.8, z2n: -1.7, z1p: 1.2, z1n: -1.1 }, { areaIndex: 2, z3p: 1.2, z3n: -1.1, z2p: 1.2, z2n: -1.1, z1p: 1.2, z1n: -1.1 }] },
-    { angle: 6, rows: [{ areaIndex: 0, z3p: 3.04, z3n: -4.02, z2p: 2.28, z2n: -2.02, z1p: 1.52, z1n: -1.34 }, { areaIndex: 1, z3p: 2.28, z3n: -2.02, z2p: 2.28, z2n: -2.02, z1p: 1.52, z1n: -1.34 }, { areaIndex: 2, z3p: 1.52, z3n: -1.34, z2p: 1.52, z2n: -1.34, z1p: 1.52, z1n: -1.34 }] },
     { angle: 7.5, rows: [{ areaIndex: 0, z3p: 3.2, z3n: -4.2, z2p: 2.4, z2n: -2.1, z1p: 1.6, z1n: -1.4 }, { areaIndex: 1, z3p: 2.4, z3n: -2.1, z2p: 2.4, z2n: -2.1, z1p: 1.6, z1n: -1.4 }, { areaIndex: 2, z3p: 1.6, z3n: -1.4, z2p: 1.6, z2n: -1.4, z1p: 1.6, z1n: -1.4 }] },
     { angle: 10, rows: [{ areaIndex: 0, z3p: 3.33, z3n: -4.07, z2p: 2.5, z2n: -2.37, z1p: 1.67, z1n: -1.57 }, { areaIndex: 1, z3p: 2.5, z3n: -2.37, z2p: 2.5, z2n: -2.37, z1p: 1.67, z1n: -1.57 }, { areaIndex: 2, z3p: 1.67, z3n: -1.57, z2p: 1.67, z2n: -1.57, z1p: 1.67, z1n: -1.57 }] },
     { angle: 15, rows: [{ areaIndex: 0, z3p: 3.6, z3n: -3.8, z2p: 2.7, z2n: -2.9, z1p: 1.8, z1n: -1.9 }, { areaIndex: 1, z3p: 2.7, z3n: -2.9, z2p: 2.7, z2n: -2.9, z1p: 1.8, z1n: -1.9 }, { areaIndex: 2, z3p: 1.8, z3n: -1.9, z2p: 1.8, z2n: -1.9, z1p: 1.8, z1n: -1.9 }] },
@@ -662,10 +660,10 @@ const CN_DATA: Record<FlowType, AngleGroup[]> = {
 
 const WIND_DATA: WindData = {
   clearGamma0: [
-    { angle: 0, rows: [{ loadCase: "A", cnw: 1.2, cnl: 0.3 }, { loadCase: "B", cnw: -1.1, cnl: -0.1 }] },
-    { angle: 2.5, rows: [{ loadCase: "A", cnw: 0, cnl: -0.57 }, { loadCase: "B", cnw: -1.3, cnl: -0.03 }] },
+    // { angle: 0, rows: [{ loadCase: "A", cnw: 1.2, cnl: 0.3 }, { loadCase: "B", cnw: -1.1, cnl: -0.1 }] },
+    // { angle: 2.5, rows: [{ loadCase: "A", cnw: 0, cnl: -0.57 }, { loadCase: "B", cnw: -1.3, cnl: -0.03 }] },
     { angle: 7.5, rows: [{ loadCase: "A", cnw: -0.6, cnl: -1.0 }, { loadCase: "B", cnw: -1.4, cnl: 0.0 }] },
-    { angle: 10, rows: [{ loadCase: "A", cnw: -0.7, cnl: -1.1 }, { loadCase: "B", cnw: -1.57, cnl: 0.0 }] },
+    // { angle: 10, rows: [{ loadCase: "A", cnw: -0.7, cnl: -1.1 }, { loadCase: "B", cnw: -1.57, cnl: 0.0 }] },
     { angle: 15, rows: [{ loadCase: "A", cnw: -0.9, cnl: -1.3 }, { loadCase: "B", cnw: -1.9, cnl: 0.0 }] },
     { angle: 22.5, rows: [{ loadCase: "A", cnw: -1.5, cnl: -1.6 }, { loadCase: "B", cnw: -2.4, cnl: -0.3 }] },
     { angle: 30, rows: [{ loadCase: "A", cnw: -1.8, cnl: -1.8 }, { loadCase: "B", cnw: -2.5, cnl: -0.5 }] },
@@ -673,10 +671,10 @@ const WIND_DATA: WindData = {
     { angle: 45, rows: [{ loadCase: "A", cnw: -1.6, cnl: -1.8 }, { loadCase: "B", cnw: -2.3, cnl: -0.7 }] },
   ],
   clearGamma180: [
-    { angle: 0, rows: [{ loadCase: "A", cnw: 1.2, cnl: 0.3 }, { loadCase: "B", cnw: -1.1, cnl: -0.1 }] },
-    { angle: 2.5, rows: [{ loadCase: "A", cnw: 1.0, cnl: 1.1 }, { loadCase: "B", cnw: 0.7, cnl: 0.17 }] },
+    // { angle: 0, rows: [{ loadCase: "A", cnw: 1.2, cnl: 0.3 }, { loadCase: "B", cnw: -1.1, cnl: -0.1 }] },
+    // { angle: 2.5, rows: [{ loadCase: "A", cnw: 1.0, cnl: 1.1 }, { loadCase: "B", cnw: 0.7, cnl: 0.17 }] },
     { angle: 7.5, rows: [{ loadCase: "A", cnw: 0.9, cnl: 1.5 }, { loadCase: "B", cnw: 1.6, cnl: 0.3 }] },
-    { angle: 10, rows: [{ loadCase: "A", cnw: 1.03, cnl: 1.53 }, { loadCase: "B", cnw: 1.67, cnl: 0.4 }] },
+    // { angle: 10, rows: [{ loadCase: "A", cnw: 1.03, cnl: 1.53 }, { loadCase: "B", cnw: 1.67, cnl: 0.4 }] },
     { angle: 15, rows: [{ loadCase: "A", cnw: 1.3, cnl: 1.6 }, { loadCase: "B", cnw: 1.8, cnl: 0.6 }] },
     { angle: 22.5, rows: [{ loadCase: "A", cnw: 1.7, cnl: 1.8 }, { loadCase: "B", cnw: 2.2, cnl: 0.7 }] },
     { angle: 30, rows: [{ loadCase: "A", cnw: 2.1, cnl: 2.1 }, { loadCase: "B", cnw: 2.6, cnl: 1.0 }] },
@@ -684,10 +682,10 @@ const WIND_DATA: WindData = {
     { angle: 45, rows: [{ loadCase: "A", cnw: 2.2, cnl: 2.5 }, { loadCase: "B", cnw: 2.6, cnl: 1.4 }] },
   ],
   obsGamma0: [
-    { angle: 0, rows: [{ loadCase: "A", cnw: -0.5, cnl: -1.2 }, { loadCase: "B", cnw: -1.1, cnl: -0.6 }] },
-    { angle: 2.5, rows: [{ loadCase: "A", cnw: -0.83, cnl: -1.4 }, { loadCase: "B", cnw: -1.5, cnl: -0.73 }] },
+    // { angle: 0, rows: [{ loadCase: "A", cnw: -0.5, cnl: -1.2 }, { loadCase: "B", cnw: -1.1, cnl: -0.6 }] },
+    // { angle: 2.5, rows: [{ loadCase: "A", cnw: -0.83, cnl: -1.4 }, { loadCase: "B", cnw: -1.5, cnl: -0.73 }] },
     { angle: 7.5, rows: [{ loadCase: "A", cnw: -1.0, cnl: -1.5 }, { loadCase: "B", cnw: -1.7, cnl: -0.8 }] },
-    { angle: 10, rows: [{ loadCase: "A", cnw: -1.03, cnl: -1.5 }, { loadCase: "B", cnw: -1.83, cnl: -0.73 }] },
+    // { angle: 10, rows: [{ loadCase: "A", cnw: -1.03, cnl: -1.5 }, { loadCase: "B", cnw: -1.83, cnl: -0.73 }] },
     { angle: 15, rows: [{ loadCase: "A", cnw: -1.1, cnl: -1.5 }, { loadCase: "B", cnw: -2.1, cnl: -0.6 }] },
     { angle: 22.5, rows: [{ loadCase: "A", cnw: -1.5, cnl: -1.7 }, { loadCase: "B", cnw: -2.3, cnl: -0.9 }] },
     { angle: 30, rows: [{ loadCase: "A", cnw: -1.5, cnl: -1.8 }, { loadCase: "B", cnw: -2.3, cnl: -1.1 }] },
@@ -695,10 +693,10 @@ const WIND_DATA: WindData = {
     { angle: 45, rows: [{ loadCase: "A", cnw: -1.3, cnl: -1.8 }, { loadCase: "B", cnw: -1.9, cnl: -1.2 }] },
   ],
   obsGamma180: [
-    { angle: 0, rows: [{ loadCase: "A", cnw: -0.5, cnl: -1.2 }, { loadCase: "B", cnw: -1.1, cnl: -0.6 }] },
-    { angle: 2.5, rows: [{ loadCase: "A", cnw: -0.3, cnl: -1.2 }, { loadCase: "B", cnw: 0.17, cnl: -0.4 }] },
+    // { angle: 0, rows: [{ loadCase: "A", cnw: -0.5, cnl: -1.2 }, { loadCase: "B", cnw: -1.1, cnl: -0.6 }] },
+    // { angle: 2.5, rows: [{ loadCase: "A", cnw: -0.3, cnl: -1.2 }, { loadCase: "B", cnw: 0.17, cnl: -0.4 }] },
     { angle: 7.5, rows: [{ loadCase: "A", cnw: -0.2, cnl: -1.2 }, { loadCase: "B", cnw: 0.8, cnl: -0.3 }] },
-    { angle: 10, rows: [{ loadCase: "A", cnw: 0.0, cnl: -1.17 }, { loadCase: "B", cnw: 0.93, cnl: -0.3 }] },
+    //  { angle: 10, rows: [{ loadCase: "A", cnw: 0.0, cnl: -1.17 }, { loadCase: "B", cnw: 0.93, cnl: -0.3 }] },
     { angle: 15, rows: [{ loadCase: "A", cnw: 0.4, cnl: -1.1 }, { loadCase: "B", cnw: 1.2, cnl: -0.3 }] },
     { angle: 22.5, rows: [{ loadCase: "A", cnw: 0.5, cnl: -1.0 }, { loadCase: "B", cnw: 1.3, cnl: 0.0 }] },
     { angle: 30, rows: [{ loadCase: "A", cnw: 0.6, cnl: -1.0 }, { loadCase: "B", cnw: 1.6, cnl: 0.1 }] },
@@ -711,8 +709,8 @@ const WIND_DATA: WindData = {
 // CONSTANTS
 // ══════════════════════════════════════════════════════════════════
 
-const TABLE_ANGLES_CN = [0, 6, 7.5, 10, 15, 30, 45];
-const TABLE_ANGLES_WIND = [0, 2.5, 7.5, 10, 15, 22.5, 30, 37.5, 45];
+const TABLE_ANGLES_CN = [0, 7.5, 10, 15, 30, 45];
+const TABLE_ANGLES_WIND = [7.5, 15, 22.5, 30, 37.5, 45];
 
 const AREA_LABELS: Record<0 | 1 | 2, string> = { 0: "≤ a²", 1: "> a², ≤ 4.0 a²", 2: "> 4.0 a²" };
 const AREA_OPTIONS = [
@@ -874,11 +872,13 @@ function TabBar({ tabs, active, onSelect }: { tabs: { id: string; label: string 
   );
 }
 
-function InfoBar({ angle, extra, qhg }: { angle: number; extra?: React.ReactNode; qhg: number }) {
+function InfoBar({ angle, extra, ke, kz }: { angle: number; extra?: React.ReactNode; ke: any; kz: any }) {
   return (
     <div style={{ background: "#f0f9ff", border: "1px solid #bae6fd", borderRadius: "8px", padding: "10px 16px", marginBottom: "18px", display: "flex", flexWrap: "wrap", gap: "20px", alignItems: "center", fontSize: "13px", color: "#0369a1" }}>
       <span><strong>Roof angle:</strong> {fmt2(angle)}° {extra}</span>
-      <span><strong>q<sub>h</sub> × G =</strong> {fmt2(qhg)} psf</span>
+      <span><strong>G =</strong> 0.85 psf</span>
+      <span><strong>Kz =</strong> {kz.toFixed(2)}</span>
+      <span><strong>Ke =</strong> {ke.toFixed(2)}</span>
     </div>
   );
 }
@@ -983,7 +983,7 @@ function WindLookupBlock({ angle, result }: { angle: number; result: WindLookupR
 // MAIN COMPONENT
 // ══════════════════════════════════════════════════════════════════
 
-export default function CarportMWFRSCalculator({ qh, cnAngle, areaIdx }: { qh: any, cnAngle: any, areaIdx: any }) {
+export default function CarportMWFRSCalculator({ qh, cnAngle, areaIdx, ke, kz }: { qh: any, cnAngle: any, areaIdx: any, ke: any, kz: any }) {
   // Shared inputs
   const g = "0.85";
 
@@ -1126,7 +1126,7 @@ export default function CarportMWFRSCalculator({ qh, cnAngle, areaIdx }: { qh: a
             {AREA_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
           </SelectField>
         </div> */}
-          <InfoBar angle={cnAngleN} qhg={qhN * gN}
+          <InfoBar angle={cnAngleN} ke={ke} kz={kz}
             extra={cnInterp ? <InterpolatedBadge lower={cnLo} upper={cnHi} /> : undefined} />
           <div style={{ display: "flex", gap: "14px", flexWrap: "wrap" }}>
             <ZoneResultTable title="Obstructed Wind Flow (psf)" accentBg="#f0fdf4" accentText="#166534" accentBorder="#86efac" result={cnObsResult} />
@@ -1210,7 +1210,7 @@ export default function CarportMWFRSCalculator({ qh, cnAngle, areaIdx }: { qh: a
           {/* <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(220px,1fr))", gap: "12px", marginBottom: "14px" }}>
           <NumberField label="Roof Angle (°)" value={windAngle} onChange={setWindAngle} step="0.5" min="0" hint="Table: 0, 2.5, 7.5, 10, 15, 22.5, 30, 37.5, 45" />
         </div> */}
-          <InfoBar angle={windAngleN} qhg={qhN * gN}
+          <InfoBar angle={windAngleN} ke={ke} kz={kz}
             extra={windInterp ? <InterpolatedBadge lower={windLo} upper={windHi} /> : undefined} />
           <WindLookupBlock angle={windAngleN} result={windResult} />
           <p style={{ fontSize: "11px", color: "#9ca3af", marginTop: "14px", lineHeight: 1.6 }}>
