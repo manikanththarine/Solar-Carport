@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import CarportMWFRSCalculator from "./CarportMWFRSCalculator";
 import { generateStructuralPDF } from "./generateStructuralPDF";
+import CFSApp from "./CFS_Software";
 
 export type AreaType = "≤ a²" | "> a², ≤ 4.0 a²" | "> 4.0 a²";
 // Style constants (match your existing accent colors)
@@ -1111,7 +1112,11 @@ const EngineeringInputForm: React.FC = () => {
 
         <br />
 
+  <br />
+        <CFSApp/>
+        {/* qh={valuesofc_c} roofAngle={roofAngle} areaIndex={areaValue} */}
 
+        <br />
         <div className="hidden">
           {/* Columns */}
 
