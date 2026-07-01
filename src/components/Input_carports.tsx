@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import CarportMWFRSCalculator from "./CarportMWFRSCalculator";
 import { generateStructuralPDF } from "./generateStructuralPDF";
-import CFSApp from "./CFS_Software";
+import CFSApp, { defaultCFSState, computeCFSResults } from "./CFS_Software";
 
 export type AreaType = "≤ a²" | "> a², ≤ 4.0 a²" | "> 4.0 a²";
 // Style constants (match your existing accent colors)
@@ -194,7 +194,9 @@ const EngineeringInputForm: React.FC = () => {
     udlMemberLabel: "M1",
     pointLoadNodeNumber: "N3A",
   });
-
+  const [showCFSDesigner, setShowCFSDesigner] = useState(false);
+  const [cfsState, setCfsState] = useState(defaultCFSState);
+  console.log("cfsState", cfsState)
   const handleChange = (
     e: React.ChangeEvent<
       HTMLInputElement | HTMLSelectElement
@@ -210,10 +212,10 @@ const EngineeringInputForm: React.FC = () => {
           : value,
     }));
   };
-  const handleSubmit = () => {
-    console.log(formData);
-    alert("Data Submitted");
-  };
+  // const handleSubmit = () => {
+  //   console.log(formData);
+  //   alert("Data Submitted");
+  // };
 
   const planeLength = formData.PanelDimensionlength * 0.00328084;
   const panelWidth = formData.PanelDimensionwidth * 0.00328084;
@@ -387,7 +389,10 @@ const EngineeringInputForm: React.FC = () => {
   ];
 
   const handleprint = () => {
-    generateStructuralPDF(formData, { areaIdx: areaValue });
+    generateStructuralPDF(formData, { areaIdx: areaValue }, {
+      cfsState,
+      cfsComputed: computeCFSResults(cfsState),
+    });
   };
 
   return (
@@ -402,7 +407,6 @@ const EngineeringInputForm: React.FC = () => {
         <div className="grid grid-cols-1 gap-4 items-start">
           <div className="space-y-4 lg:fixed lg:left-0 lg:top-0 lg:z-10 lg:h-screen lg:w-[380px] lg:overflow-y-auto lg:border-r lg:border-gray-200 lg:bg-gray-50 lg:p-4">
 
-            {/* Wind Inputs */}
 
             <SectionCard title="Inputs">
               <div className="grid grid-cols-1 gap-3">
@@ -825,209 +829,204 @@ const EngineeringInputForm: React.FC = () => {
               </div>
             </SectionCard>
 
-            <div className="sticky bottom-0 -mx-4 flex flex-col gap-3 border-t border-gray-200 bg-gray-50/95 p-4 backdrop-blur">
-              <button
-                className="
-                w-full
-                px-6
-                py-2
-                rounded-md
-                text-xs
-                font-semibold
-                bg-gray-600
-                text-white
-                hover:bg-gray-700
-              "
-                onClick={handleprint}
 
+
+          </div>
+        </div>
+
+
+        <div className="sticky top-0 z-20 bg-white border-b border-gray-200 mb-6">
+          <div className="flex items-center justify-between px-6 py-4">
+
+            {/* Left Side Buttons */}
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => setShowCFSDesigner(true)}
+                className="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2 rounded-lg font-medium transition"
               >
-                Print
+                CFS Designer
               </button>
 
               <button
-                onClick={handleSubmit}
-                className="
-                w-full
-                px-6
-                py-2
-                rounded-md
-                text-xs
-                font-semibold
-                bg-blue-600
-                text-white
-                hover:bg-blue-700
-              "
+                onClick={() => setShowCFSDesigner(false)}
+                className="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2 rounded-lg font-medium transition"
               >
-                Submit
+                Engineering Form
               </button>
+            </div>
 
-            </div>          </div>
+            {/* Right Side Button */}
+            <button
+              onClick={handleprint}
+              className="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2 rounded-lg font-medium transition"
+            >
+              Print
+            </button>
 
+          </div>
+        </div>
 
-          <aside className="space-y-4">
+        {showCFSDesigner ? (
+          <div>
+            <CFSApp cfsState={cfsState} setCfsState={setCfsState} />
+          </div>
+        ) : (
+          <>
+            <aside className="space-y-4">
+              <SectionCard title="Dead Load Calculation">
+                <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
+                  <InputField
+                    label="Panel Length (ft)"
+                    name="panelLength"
+                    value={planeLength.toFixed(3)}
+                  />
 
+                  <InputField
+                    label="Panel Width (ft)"
+                    name="panelWidth"
+                    value={panelWidth.toFixed(3)}
+                  />
 
+                  <InputField
+                    label="Panel Weight (lb)"
+                    name="panelWeight"
+                    value={panelWeight.toFixed(3)}
+                  />
+                  <InputField
+                    label="Panel Area (sq.ft)"
+                    name="panelArea"
+                    value={panelArea.toFixed(3)}
+                  />
 
-
-            {/* Panel Data */}
-
-            <SectionCard title="Dead Load Calculation">
-              <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
-                <InputField
-                  label="Panel Length (ft)"
-                  name="panelLength"
-                  value={planeLength.toFixed(3)}
-                />
-
-                <InputField
-                  label="Panel Width (ft)"
-                  name="panelWidth"
-                  value={panelWidth.toFixed(3)}
-                />
-
-                <InputField
-                  label="Panel Weight (lb)"
-                  name="panelWeight"
-                  value={panelWeight.toFixed(3)}
-                />
-                <InputField
-                  label="Panel Area (sq.ft)"
-                  name="panelArea"
-                  value={panelArea.toFixed(3)}
-                />
-
-                <InputField
-                  label="Panel Dead Load"
-                  name="panelDeadLoad"
-                  value={panelDeadLoad.toFixed(3)}
-                />
-
-
-                <InputField
-                  label="Total Dead Load"
-                  name="totalDeadLoad"
-                  value={totalDeadLoad.toFixed(3)}
-                />
-              </div>
-            </SectionCard>
-            <SectionCard
-              title='Snow Load'
-            >              <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
+                  <InputField
+                    label="Panel Dead Load"
+                    name="panelDeadLoad"
+                    value={panelDeadLoad.toFixed(3)}
+                  />
 
 
-                <InputField
-                  label="Flat Roof Snow"
-                  name="flatRoofSnow"
-                  value={flatRoofSnow.toFixed(2)}
-                />
-                <InputField
-                  label="ExposureFactor"
-                  name="ExposureFactor"
-                  value={FlatRoofSnowLoad(formData.exposureofRoof)}
-                />
-
-                <InputField
-                  label="Minimum Snow Load"
-                  name="MinimumSnowLoad"
-                  value={MinimumSnowLoad.toFixed(2)}
-                />
+                  <InputField
+                    label="Total Dead Load"
+                    name="totalDeadLoad"
+                    value={totalDeadLoad.toFixed(3)}
+                  />
+                </div>
+              </SectionCard>
+              <SectionCard
+                title='Snow Load'
+              >              <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
 
 
-                <InputField
-                  label="Slope Factor"
-                  name="SlopeFactor"
-                  value={SlopeFactor.toFixed(2)}
-                />
+                  <InputField
+                    label="Flat Roof Snow"
+                    name="flatRoofSnow"
+                    value={flatRoofSnow.toFixed(2)}
+                  />
+                  <InputField
+                    label="ExposureFactor"
+                    name="ExposureFactor"
+                    value={FlatRoofSnowLoad(formData.exposureofRoof)}
+                  />
 
-                <InputField
-                  label="Sloped Roof Snow"
-                  name="slopedRoofSnow"
-                  value={slopedRoofSnow.toFixed(2)}
-                />
-                <div className="flex justify-end items-end mt-4">
-                  <div className="text-sm font-medium">
-                    {MinimumSnowLoad > FlatRoofSnowLoad(formData.exposureofRoof)
-                      ? "Min Governs"
-                      : "Use PFF"}
+                  <InputField
+                    label="Minimum Snow Load"
+                    name="MinimumSnowLoad"
+                    value={MinimumSnowLoad.toFixed(2)}
+                  />
+
+
+                  <InputField
+                    label="Slope Factor"
+                    name="SlopeFactor"
+                    value={SlopeFactor.toFixed(2)}
+                  />
+
+                  <InputField
+                    label="Sloped Roof Snow"
+                    name="slopedRoofSnow"
+                    value={slopedRoofSnow.toFixed(2)}
+                  />
+                  <div className="flex justify-end items-end mt-4">
+                    <div className="text-sm font-medium">
+                      {MinimumSnowLoad > FlatRoofSnowLoad(formData.exposureofRoof)
+                        ? "Min Governs"
+                        : "Use PFF"}
+                    </div>
                   </div>
                 </div>
-              </div>
-            </SectionCard>
+              </SectionCard>
 
-            {/* Geometry */}
-
+              {/* Geometry */}
 
 
-          </aside>
-        </div>
-        <br />
+              <br />
 
-        <SectionCard title="Carport Wind">
-          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
+              <SectionCard title="Carport Wind">
+                <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
 
-            <InputField
-              label="Velocity Pressure"
-              name="VelocityPressure"
-              value={VelocityPressure.toFixed(2)}
-            />
+                  <InputField
+                    label="Velocity Pressure"
+                    name="VelocityPressure"
+                    value={VelocityPressure.toFixed(2)}
+                  />
 
 
 
-            <InputField
-              label="A"
-              name="a"
-              value={a.toFixed(2)}
-            />
+                  <InputField
+                    label="A"
+                    name="a"
+                    value={a.toFixed(2)}
+                  />
 
-            <InputField
-              label="Trib Area"
-              name="TribArea"
-              value={TribArea.toFixed(2)}
-            />
-            <InputField
-              label="Area"
-              name="Area"
-              value={Area}
-            />
-          </div>
-        </SectionCard>
-        <br />
-        <SectionCard title="Steel Purlin Design">
-          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
-            <InputField
-              label="Span"
-              name="Span"
-              value={formData.Purlin_Length}
-            />
-            <InputField
-              label="Over Hang"
-              name="Over"
-              value={formData.purlinOverhangLength}
-            />
-            <InputField
-              label="Trib Width"
-              name="Trib"
-              value={formData.purlinTribWidth}
-            />
-            <InputField
-              label="Angle"
-              name="Angle"
-              value={formData.roofSlope}
-            />
-            <InputField label="Dead Load D (psf)" name="D" value={D.toFixed(2)} />
-            <InputField label="Live Load Floor (psf)" name="Lf" value={"0.00"} />
-            <InputField label="Live Load Roof Lr (psf)" name="Lr" value={"20.00"} />
-            <InputField label="Snow Load S (psf)" name="S" value={S.toFixed(2)} />
-            <InputField label="Wind Load W Downward (psf)" name="W_down" value={W_downward.toFixed(2)} />
-            <InputField label="Wind Load W Uplift (psf)" name="W_up" value={W_uplift.toFixed(2)} />
+                  <InputField
+                    label="Trib Area"
+                    name="TribArea"
+                    value={TribArea.toFixed(2)}
+                  />
+                  <InputField
+                    label="Area"
+                    name="Area"
+                    value={Area}
+                  />
+                </div>
+              </SectionCard>
+              <br />
+              <SectionCard title="Steel Purlin Design">
+                <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
+                  <InputField
+                    label="Span"
+                    name="Span"
+                    value={formData.Purlin_Length}
+                  />
+                  <InputField
+                    label="Over Hang"
+                    name="Over"
+                    value={formData.purlinOverhangLength}
+                  />
+                  <InputField
+                    label="Trib Width"
+                    name="Trib"
+                    value={formData.purlinTribWidth}
+                  />
+                  <InputField
+                    label="Angle"
+                    name="Angle"
+                    value={formData.roofSlope}
+                  />
+                  <InputField label="Dead Load D (psf)" name="D" value={D.toFixed(2)} />
+                  <InputField label="Live Load Floor (psf)" name="Lf" value={"0.00"} />
+                  <InputField label="Live Load Roof Lr (psf)" name="Lr" value={"20.00"} />
+                  <InputField label="Snow Load S (psf)" name="S" value={S.toFixed(2)} />
+                  <InputField label="Wind Load W Downward (psf)" name="W_down" value={W_downward.toFixed(2)} />
+                  <InputField label="Wind Load W Uplift (psf)" name="W_up" value={W_uplift.toFixed(2)} />
 
-            {/* Linear loads = psf × Trib Width */}
-            <InputField label="wD = D × Trib (plf)" name="wD" value={wD.toFixed(2)} />
-            <InputField label="wLr = Lr × Trib (plf)" name="wLr" value={wLr.toFixed(2)} />
-            <InputField label="wS = S × Trib (plf)" name="wS" value={wS.toFixed(2)} />
-            <InputField label="wW Downward (plf)" name="wW_down" value={wW_down.toFixed(2)} />
-            <InputField label="wW Uplift (plf)" name="wW_up" value={wW_up.toFixed(2)} />
-            {/* <InputField
+                  {/* Linear loads = psf × Trib Width */}
+                  <InputField label="wD = D × Trib (plf)" name="wD" value={wD.toFixed(2)} />
+                  <InputField label="wLr = Lr × Trib (plf)" name="wLr" value={wLr.toFixed(2)} />
+                  <InputField label="wS = S × Trib (plf)" name="wS" value={wS.toFixed(2)} />
+                  <InputField label="wW Downward (plf)" name="wW_down" value={wW_down.toFixed(2)} />
+                  <InputField label="wW Uplift (plf)" name="wW_up" value={wW_up.toFixed(2)} />
+                  {/* <InputField
               label="DownWard"
               name="Downward"
               value={PurlinDownward}
@@ -1040,222 +1039,78 @@ const EngineeringInputForm: React.FC = () => {
             /> */}
 
 
-          </div>
-        </SectionCard>
-        <br />
-        <SectionCard title="Convert Area Loads to Line Loads" >
-          <div style={{
-            flex: "1 1 280px",
-            border: `1px solid ${accentBorder}`,
-            borderRadius: "10px",
-            overflow: "hidden",
-            marginBottom: "16px"
-          }}>
+                </div>
+              </SectionCard>
+              <br />
+              <SectionCard title="Convert Area Loads to Line Loads" >
+                <div style={{
+                  flex: "1 1 280px",
+                  border: `1px solid ${accentBorder}`,
+                  borderRadius: "10px",
+                  overflow: "hidden",
+                  marginBottom: "16px"
+                }}>
 
 
-            {/* Table */}
-            <table style={{ borderCollapse: "collapse", width: "100%" }}>
-              <thead>
-                <tr style={{ background: "#f9fafb" }}>
-                  <th style={{ ...thBase, textAlign: "left", paddingLeft: "14px" }}>Load</th>
-                  <th style={{ ...thBase, textAlign: "center" }}>psf</th>
-                  <th style={{ ...thBase, textAlign: "center" }}>× {tribWidth} ft</th>
-                  <th style={{ ...thBase, borderRight: "none", textAlign: "center" }}>plf</th>
-                </tr>
-              </thead>
-              <tbody>
-                {loads.map(({ label, psf, plf }, i) => (
-                  <tr key={label} style={{ background: i % 2 === 0 ? "#fff" : "#fafafa" }}>
-                    {/* Load label */}
-                    <td style={{
-                      ...tdBase,
-                      fontWeight: 600,
-                      color: "#374151",
-                      background: "#f3f4f6",
-                      textAlign: "left",
-                      paddingLeft: "14px",
-                    }}>
-                      {label}
-                    </td>
+                  {/* Table */}
+                  <table style={{ borderCollapse: "collapse", width: "100%" }}>
+                    <thead>
+                      <tr style={{ background: "#f9fafb" }}>
+                        <th style={{ ...thBase, textAlign: "left", paddingLeft: "14px" }}>Load</th>
+                        <th style={{ ...thBase, textAlign: "center" }}>psf</th>
+                        <th style={{ ...thBase, textAlign: "center" }}>× {tribWidth} ft</th>
+                        <th style={{ ...thBase, borderRight: "none", textAlign: "center" }}>plf</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {loads.map(({ label, psf, plf }, i) => (
+                        <tr key={label} style={{ background: i % 2 === 0 ? "#fff" : "#fafafa" }}>
+                          {/* Load label */}
+                          <td style={{
+                            ...tdBase,
+                            fontWeight: 600,
+                            color: "#374151",
+                            background: "#f3f4f6",
+                            textAlign: "left",
+                            paddingLeft: "14px",
+                          }}>
+                            {label}
+                          </td>
 
-                    {/* psf */}
-                    <td style={{ ...tdBase, textAlign: "center", color: "#374151" }}>
-                      {psf.toFixed(1)}
-                    </td>
+                          {/* psf */}
+                          <td style={{ ...tdBase, textAlign: "center", color: "#374151" }}>
+                            {psf.toFixed(1)}
+                          </td>
 
-                    {/* × trib width */}
-                    <td style={{ ...tdBase, textAlign: "center", color: "#9ca3af" }}>
-                      ×{tribWidth}
-                    </td>
+                          {/* × trib width */}
+                          <td style={{ ...tdBase, textAlign: "center", color: "#9ca3af" }}>
+                            ×{tribWidth}
+                          </td>
 
-                    {/* plf — highlighted */}
-                    <td style={{
-                      ...tdBase,
-                      borderRight: "none",
-                      textAlign: "center",
-                      fontWeight: 700,
-                      color: accentText,
-                    }}>
-                      {plf}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                          {/* plf — highlighted */}
+                          <td style={{
+                            ...tdBase,
+                            borderRight: "none",
+                            textAlign: "center",
+                            fontWeight: 700,
+                            color: accentText,
+                          }}>
+                            {plf}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
 
-        </SectionCard>
+              </SectionCard>
+            </aside>
+            <br />
+            <CarportMWFRSCalculator qh={valuesofc_c} cnAngle={roofAngle} areaIdx={areaValue} ke={ke} kz={Kz} />
 
-        <br />
-        <CarportMWFRSCalculator qh={valuesofc_c} cnAngle={roofAngle} areaIdx={areaValue} ke={ke} kz={Kz} />
-        {/* qh={valuesofc_c} roofAngle={roofAngle} areaIndex={areaValue} */}
+          </>
+        )}
 
-        <br />
-
-  <br />
-        <CFSApp/>
-        {/* qh={valuesofc_c} roofAngle={roofAngle} areaIndex={areaValue} */}
-
-        <br />
-        <div className="hidden">
-          {/* Columns */}
-
-          <SectionCard title="Column Data">
-            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
-
-              <InputField
-                label="Column Distance"
-                name="columnDistance"
-                type="number"
-                value={formData.columnDistance}
-                onChange={handleChange}
-              />
-
-              <InputField
-                label="Column Height"
-                name="columnHeight"
-                type="number"
-                value={formData.columnHeight}
-                onChange={handleChange}
-              />
-
-              <InputField
-                label="Column Place 1"
-                name="columnPlace1"
-                type="number"
-                value={formData.columnPlace1}
-                onChange={handleChange}
-              />
-
-              <InputField
-                label="Column Place 2"
-                name="columnPlace2"
-                type="number"
-                value={formData.columnPlace2}
-                onChange={handleChange}
-              />
-            </div>
-          </SectionCard>
-
-          {/* Foundation */}
-
-          <SectionCard title="Foundation">
-            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
-
-              <InputField
-                label="Foundation Depth"
-                name="foundationDepth"
-                type="number"
-                value={formData.foundationDepth}
-                onChange={handleChange}
-              />
-
-              <InputField
-                label="Foundation Diameter"
-                name="foundationDia"
-                type="number"
-                value={formData.foundationDia}
-                onChange={handleChange}
-              />
-
-              <InputField
-                label="Foundation Moment"
-                name="foundationMoment"
-                type="number"
-                value={formData.foundationMoment}
-                onChange={handleChange}
-              />
-
-              <InputField
-                label="Lateral Bearing Pressure"
-                name="lateralBearingPressure"
-                type="number"
-                value={formData.lateralBearingPressure}
-                onChange={handleChange}
-              />
-            </div>
-          </SectionCard>
-
-          {/* Loads */}
-
-          <SectionCard title="Loads Input">
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2 gap-3">
-
-              <InputField
-                label="UDL Member Label"
-                name="udlMemberLabel"
-                value={formData.udlMemberLabel}
-                onChange={handleChange}
-              />
-
-              <InputField
-                label="Point Load Node Number"
-                name="pointLoadNodeNumber"
-                value={formData.pointLoadNodeNumber}
-                onChange={handleChange}
-              />
-            </div>
-          </SectionCard>
-        </div>
-
-        <div className="hidden">
-
-          <button
-            className="
-                w-full
-                sm:w-auto
-                px-6
-                py-2
-                rounded-md
-                text-xs
-                font-semibold
-                bg-gray-600
-                text-white
-                hover:bg-gray-700
-              "
-          >
-            Reset
-          </button>
-
-          <button
-            onClick={handleSubmit}
-            className="
-                w-full
-                sm:w-auto
-                px-6
-                py-2
-                rounded-md
-                text-xs
-                font-semibold
-                bg-blue-600
-                text-white
-                hover:bg-blue-700
-              "
-          >
-            Submit
-          </button>
-
-        </div>
       </div>
     </div>
   );

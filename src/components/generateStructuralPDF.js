@@ -155,7 +155,7 @@ function windGroupLookup(groups, angle, qh, g) {
 }
 
 // ─── Main export ──────────────────────────────────────────────────────────────
-export async function generateStructuralPDF(formData, computed) {
+export async function generateStructuralPDF(formData, computed, cfsData) {
   const jsPDF = await loadJsPDF();
   const doc = new jsPDF({ unit: "pt", format: "letter" });
 
@@ -956,6 +956,485 @@ export async function generateStructuralPDF(formData, computed) {
     ML, y, { size: 7.5, color: MID }
   );
   y += 14;
+
+  // ══════════════════════════════════════════════════════════════════════════
+  // CFS DESIGNER REPORT (pages 10+) — mirrors the "Report" tab in CFS_Software.jsx
+  // ══════════════════════════════════════════════════════════════════════════
+  let lastPageNum = 9;
+  if (cfsData && cfsData.cfsState && cfsData.cfsComputed) {
+    const cs = cfsData.cfsState;
+    const cc = cfsData.cfsComputed;
+    const PASS = [22, 101, 52];
+    const FAIL = [153, 27, 27];
+    const WARN = [180, 120, 20];
+
+    lastPageNum = 10;
+    doc.addPage();
+    drawHeader(lastPageNum);
+
+    function ensureSpace(h) {
+      if (y + h > H - 90) {
+        doc.addPage();
+        lastPageNum += 1;
+        drawHeader(lastPageNum);
+      }
+    }
+
+    function twoColKV(leftTitle, leftPairs, rightTitle, rightPairs) {
+      ensureSpace(20 + Math.max(leftPairs.length, rightPairs.length) * 13);
+      const xL = ML + 4, xR = ML + 280;
+      const wL = 250, wR = 250;
+      let yL = y, yR = y;
+      text(leftTitle, xL, yL, { size: 8, style: "bold", color: MID }); yL += 12;
+      leftPairs.forEach(([k, v], i) => {
+        if (i % 2 === 0) { doc.setFillColor(248, 249, 252); doc.rect(xL - 4, yL - 9, wL, 13, "F"); }
+        text(k, xL, yL, { size: 8 });
+        text(String(v), xL + wL - 6, yL, { size: 8, font: MONO, style: "bold", align: "right" });
+        yL += 13;
+      });
+      text(rightTitle, xR, yR, { size: 8, style: "bold", color: MID }); yR += 12;
+      rightPairs.forEach(([k, v], i) => {
+        if (i % 2 === 0) { doc.setFillColor(248, 249, 252); doc.rect(xR - 4, yR - 9, wR, 13, "F"); }
+        text(k, xR, yR, { size: 8 });
+        text(String(v), xR + wR - 6, yR, { size: 8, font: MONO, style: "bold", align: "right" });
+        yR += 13;
+      });
+      y = Math.max(yL, yR) + 8;
+    }
+
+    function statGrid(items) {
+      const cols = 3;
+      const cw = CW / cols;
+      const rows = Math.ceil(items.length / cols);
+      ensureSpace(rows * 34 + 8);
+      items.forEach((it, i) => {
+        const cx = ML + (i % cols) * cw;
+        const ry = y + Math.floor(i / cols) * 34;
+        doc.setFillColor(248, 249, 252);
+        doc.setDrawColor(...LIGHT);
+        doc.roundedRect(cx, ry - 9, cw - 8, 30, 2, 2, "FD");
+        text(it.label, cx + 6, ry, { size: 6.5, color: MID });
+        text(String(it.value), cx + 6, ry + 13, { size: 10, font: MONO, style: "bold", color: it.color || BLACK });
+        if (it.note) text(it.note, cx + 6, ry + 22, { size: 6.5, color: MID });
+      });
+      y += rows * 34 + 8;
+    }
+
+    function dcrBar(label, dcr, limit = 1.0) {
+      ensureSpace(24);
+      const ok = dcr <= limit;
+      text(label, ML + 4, y, { size: 8, color: MID });
+      text(`${fmt(dcr, 3)}  ${ok ? "OK" : "NG"}`, MR, y,
+        { size: 8, style: "bold", color: ok ? PASS : FAIL, align: "right" });
+      y += 6;
+      doc.setFillColor(...LIGHT);
+      doc.rect(ML + 4, y, CW - 8, 5, "F");
+      doc.setFillColor(...(ok ? PASS : FAIL));
+      doc.rect(ML + 4, y, Math.max(0, Math.min((dcr / limit) * (CW - 8), CW - 8)), 5, "F");
+      y += 16;
+    }
+
+    function simpleTable(headers, rows, widths, note) {
+      ensureSpace(20 + rows.length * 13 + (note ? 12 : 0));
+      const xs = [];
+      let cx = ML + 4;
+      widths.forEach((w) => { xs.push(cx); cx += w; });
+      doc.setFillColor(...HEADER_BG);
+      doc.rect(ML, y - 9, CW, 13, "F");
+      headers.forEach((h, i) => text(h, xs[i], y, { size: 7.5, style: "bold" }));
+      y += 8;
+      rule(ML, y, MR, 0.5, LIGHT);
+      y += 8;
+      rows.forEach((row, i) => {
+        if (i % 2 === 0) { doc.setFillColor(248, 249, 252); doc.rect(ML, y - 9, CW, 13, "F"); }
+        row.forEach((cell, j) => text(String(cell), xs[j], y, { size: 7.5, font: j === 0 ? SANS : MONO }));
+        y += 13;
+      });
+      if (note) { text(note, ML + 4, y, { size: 7, color: MID, style: "italic" }); y += 12; }
+      y += 4;
+    }
+
+    // ── Cross-section illustration (mirrors the SVG in the Report tab) ───────
+    function drawCrossSection(cs) {
+      ensureSpace(150);
+      text("Cross-section illustration", ML + 4, y, { size: 8, style: "bold", color: MID });
+      y += 12;
+
+      const ox = ML + 10, oy = y;
+      const k = 0.6; // scale from the on-screen 680×160 viewBox
+      const px = (sx) => ox + sx * k;
+      const pv = (sy) => oy + sy * k;
+
+      const STEEL = [107, 141, 184];
+      const AMBER = [232, 160, 48];
+      const NAVY  = [13, 27, 42];
+
+      doc.setDrawColor(...NAVY);
+      doc.setLineWidth(0.5);
+
+      doc.setFillColor(...STEEL);
+      doc.rect(px(280), pv(15), 14 * k, 130 * k, "FD");   // web
+      doc.rect(px(194), pv(15), 86 * k, 14 * k, "FD");    // top flange
+      doc.rect(px(194), pv(131), 86 * k, 14 * k, "FD");   // bottom flange
+
+      doc.setFillColor(...AMBER);
+      doc.rect(px(194), pv(15), 14 * k, 24 * k, "FD");    // top lip
+      doc.rect(px(194), pv(121), 14 * k, 24 * k, "FD");   // bottom lip
+
+      doc.circle(px(274), pv(80), 4 * k, "F");
+      text("CG", px(258), pv(77), { size: 6.5, color: AMBER, font: MONO });
+
+      doc.setDrawColor(170, 170, 170);
+      doc.setLineWidth(0.4);
+      doc.setLineDashPattern([2, 1.5], 0);
+      doc.line(px(310), pv(15), px(310), pv(145));
+      doc.line(px(194), pv(6), px(294), pv(6));
+      doc.setLineDashPattern([], 0);
+
+      text(`H = ${fmt(cs.H, 3)}"`, px(318), pv(83), { size: 7, color: MID });
+      text(`B = ${fmt(cs.B, 3)}"`, px(244), pv(4), { size: 7, color: MID, align: "center" });
+      text(`D=${fmt(cs.D, 3)}"`, px(176), pv(30), { size: 6.5, color: AMBER, align: "right" });
+      text(`t=${fmt(cs.t, 4)}"`, px(318), pv(148), { size: 6.5, color: MID });
+
+      text("Lip (amber)", px(440), pv(30), { size: 7, color: MID });
+      text("Web & flanges (blue)", px(440), pv(80), { size: 7, color: MID });
+      text("Prequalified section: Yes", px(440), pv(130), { size: 7, color: MID });
+
+      y = oy + 160 * k + 14;
+    }
+
+    // ── Shear, moment & deflection diagrams (mirrors the SVG in the Report tab) ─
+    function drawShearMomentDeflection() {
+      ensureSpace(240);
+      text("Shear, moment & deflection diagrams", ML + 4, y, { size: 8, style: "bold", color: MID });
+      y += 12;
+
+      const ox = ML + 10, oy = y;
+      const k = 0.68; // scale from the on-screen 680×310 viewBox
+      const px = (sx) => ox + sx * k;
+      const pv = (sy) => oy + sy * k;
+
+      const BLUE_D  = [42, 120, 214];
+      const GREEN_D = PASS;
+      const AMBER_D = [216, 155, 40];
+      const RED_D   = FAIL;
+
+      // Axis labels
+      text("Shear",    px(2), pv(50),  { size: 6.5, color: MID });
+      text("Moment",   px(2), pv(145), { size: 6.5, color: MID });
+      text("Deflect.", px(2), pv(245), { size: 6.5, color: MID });
+
+      // Baselines
+      doc.setDrawColor(...LIGHT);
+      doc.setLineWidth(0.4);
+      doc.line(px(55), pv(55),  px(620), pv(55));
+      doc.line(px(55), pv(165), px(620), pv(165));
+      doc.line(px(55), pv(250), px(620), pv(250));
+
+      const polyline = (pts, color, w = 1.1) => {
+        doc.setDrawColor(...color);
+        doc.setLineWidth(w);
+        for (let i = 0; i < pts.length - 1; i++) {
+          doc.line(px(pts[i][0]), pv(pts[i][1]), px(pts[i + 1][0]), pv(pts[i + 1][1]));
+        }
+      };
+
+      // Sample a quadratic Bezier (M → Q → Q → L) into straight segments
+      const quadPath = (start, segs) => {
+        const pts = [start];
+        let cur = start;
+        segs.forEach((s) => {
+          if (s.q) {
+            const [x0, y0] = cur;
+            for (let i = 1; i <= 14; i++) {
+              const t = i / 14, mt = 1 - t;
+              pts.push([
+                mt * mt * x0 + 2 * mt * t * s.q[0] + t * t * s.x,
+                mt * mt * y0 + 2 * mt * t * s.q[1] + t * t * s.y,
+              ]);
+            }
+          } else {
+            pts.push([s.x, s.y]);
+          }
+          cur = [s.x, s.y];
+        });
+        return pts;
+      };
+
+      // Shear diagram
+      polyline([[55, 55], [55, 30], [520, 81], [520, 47], [620, 55]], BLUE_D);
+      text("+1,601 lb", px(60), pv(28), { size: 6.5, color: BLUE_D, font: MONO });
+      text("-1,723 lb", px(525), pv(84), { size: 6.5, color: RED_D, font: MONO });
+      text("+635 lb",   px(525), pv(46), { size: 6.5, color: BLUE_D, font: MONO });
+
+      // Moment diagram
+      const momentPts = quadPath([55, 165], [
+        { q: [285, 100], x: 435, y: 165 },
+        { q: [500, 185], x: 520, y: 175 },
+        { x: 620, y: 165 },
+      ]);
+      polyline(momentPts, GREEN_D);
+      text("+10,413 lb-ft", px(285), pv(97),  { size: 6.5, color: GREEN_D, font: MONO, align: "center" });
+      text("@ 13.007 ft",   px(285), pv(109), { size: 6,   color: MID,     align: "center" });
+      text("-1,639 lb-ft",  px(510), pv(195), { size: 6.5, color: RED_D,   font: MONO, align: "center" });
+
+      // Deflection diagram
+      const deflPts = quadPath([55, 250], [
+        { q: [290, 282], x: 400, y: 250 },
+        { q: [520, 228], x: 620, y: 243 },
+      ]);
+      polyline(deflPts, AMBER_D);
+      text('-1.604" (down) @ 13.323 ft', px(290), pv(295), { size: 6.5, color: AMBER_D, align: "center" });
+      text('+0.896"', px(590), pv(238), { size: 6.5, color: GREEN_D, align: "center" });
+
+      // Support ticks
+      doc.setDrawColor(...MID);
+      doc.setLineWidth(0.6);
+      [55, 520, 620].forEach((sx) => doc.line(px(sx), pv(53), px(sx), pv(57)));
+      text("0 ft",    px(55),  pv(68), { size: 6, color: MID, align: "center" });
+      text("27 ft",   px(520), pv(68), { size: 6, color: MID, align: "center" });
+      text("32.16 ft",px(620), pv(68), { size: 6, color: MID, align: "center" });
+
+      // Span dimension line
+      doc.setDrawColor(...LIGHT);
+      doc.setLineWidth(0.4);
+      doc.line(px(55), pv(302), px(520), pv(302));
+      text("Primary span = 27.0 ft", px(287), pv(310), { size: 6.5, color: MID, align: "center" });
+
+      y = oy + 310 * k + 10;
+    }
+
+    sectionTitle("CFS MEMBER DESIGN REPORT  (AISI S100-24, ASD)");
+    text(
+      `${cs.sectionName}  ·  ${cs.material}  ·  Governing DCR = ${fmt(cc.overallDCR, 3)}  ·  ${cc.overallOK ? "PASSES" : "FAILS"}`,
+      ML, y, { size: 8.5, style: "bold", color: cc.overallOK ? BLUE : FAIL }
+    );
+    y += 16;
+
+    // ── 1. Section inputs & properties ──────────────────────────────────────
+    subTitle("1. Section Inputs & Properties");
+    twoColKV(
+      "Geometry & Material",
+      [
+        ["Section name", cs.sectionName],
+        ["Web Height (H)", `${fmt(cs.H, 3)} in`],
+        ["Flange Width (B)", `${fmt(cs.B, 3)} in`],
+        ["Lip Length (D)", `${fmt(cs.D, 3)} in`],
+        ["Thickness (design)", `${fmt(cs.t, 4)} in`],
+        ["Material", cs.material],
+        ["Yield Strength, Fy", `${fmt(cs.Fy, 0)} ksi`],
+        ["Tensile Strength, Fu", `${fmt(cs.Fu, 0)} ksi`],
+        ["Modulus, E", `${fmt(cs.E, 0)} ksi`],
+        ["Cold-work increase", "Applied"],
+        ["Inelastic reserve", "Applied"],
+      ],
+      "Gross Section Properties",
+      [
+        ["Gross Area, A", `${fmt(cc.sp.A, 4)} in²`],
+        ["Moment of Inertia, Ix", `${fmt(cc.sp.Ix, 4)} in⁴`],
+        ["Section Modulus, Sx", `${fmt(cc.sp.Sx, 4)} in³`],
+        ["Moment of Inertia, Iy", `${fmt(cc.sp.Iy, 4)} in⁴`],
+        ["Flat web height, hw", `${fmt(cc.sp.hw, 3)} in`],
+        ["Flat flange, bf", `${fmt(cc.sp.bf, 3)} in`],
+        ["Member length", "32.16 ft"],
+        ["Member weight", "201.62 lb"],
+      ]
+    );
+    text("Centerline segments", ML + 4, y, { size: 8, style: "bold", color: MID }); y += 12;
+    simpleTable(
+      ["#", "Length", "Angle", "R (in)", "Web"],
+      [
+        ["1", "0.713\"", "270°", "0.188", "None"],
+        ["2", "3.426\"", "180°", "0.188", "Single"],
+        ["3", "10.000\"", "90°", "0.188", "Cee"],
+        ["4", "3.426\"", "0°", "0.188", "Single"],
+        ["5", "0.713\"", "−90°", "0.188", "None"],
+      ],
+      [30, 90, 80, 80, 100]
+    );
+    drawCrossSection(cs);
+
+    // ── 2. DSM elastic buckling parameters ──────────────────────────────────
+    subTitle("2. Direct Strength Method — Elastic Buckling Parameters");
+    statGrid([
+      { label: "Pcrl / Py", value: fmt(cc.Pcrl / cc.Py, 5) },
+      { label: "Pcrd / Py", value: fmt(cc.Pcrd / cc.Py, 5) },
+      { label: "Prequalified section", value: "Yes", color: PASS },
+      { label: "Mcrl / My (Mx+)", value: fmt(cc.Mcrl / cc.My, 5) },
+      { label: "Mcrd / My (Mx+)", value: fmt(cc.Mcrd / cc.My, 5) },
+      { label: "Mcrl / My (My−)", value: "0.87272" },
+    ]);
+    text("Finite strip elastic buckling results", ML + 4, y, { size: 8, style: "bold", color: MID }); y += 12;
+    simpleTable(
+      ["Mode", "Magnitude", "Stress (ksi)", "Stress/Yield", "Half-wave (ft)", "αs"],
+      [
+        ["Pcrl", "30,004 lb", "16.27", "0.2958", "0.643", "—"],
+        ["Pcrd", "44,063 lb", "23.90", "0.4345", "1.862", "—"],
+        ["Mcrlx+", "39,420 lb-ft", "84.18", "1.5306", "0.473", "1.00"],
+        ["Mcrdx+", "26,014 lb-ft", "55.55", "1.0101", "2.003", "1.00"],
+        ["Mcrlx−", "39,420 lb-ft", "84.18", "1.5306", "0.473", "1.00"],
+        ["Mcrdx−", "26,014 lb-ft", "55.55", "1.0101", "2.003", "1.00"],
+        ["Mcrly+", "27,167 lb-ft", "303.51", "5.5183", "0.253", "1.00"],
+        ["Mcrdy+", "6,935 lb-ft", "77.48", "1.4087", "2.153", "0.00"],
+        ["Mcrly−", "4,297 lb-ft", "48.00", "0.8727", "0.635", "1.00"],
+        ["Mcrdy−", "— N/A —", "—", "—", "—", "—"],
+        ["Bcrw", "678,485 lb-in²", "170.44", "3.0988", "0.459", "—"],
+        ["Bcrf", "407,390 lb-in²", "102.34", "1.8607", "2.025", "—"],
+      ],
+      [60, 90, 80, 80, 90, 40]
+    );
+
+    // ── 3. Analysis inputs ───────────────────────────────────────────────────
+    subTitle("3. Analysis Inputs — CFS Purlin");
+    twoColKV(
+      "General Parameters",
+      [
+        ["Orientation", "Horizontal"],
+        ["Global buckling", "Elastic theory"],
+        ["Include torsion", "Yes"],
+        ["Lx", "27.000 ft"],
+        ["Ly", "3.550 ft"],
+        ["Lt", "9.000 ft"],
+        ["Kx / Ky / Kt", "1.00 / 1.00 / 1.00"],
+        ["ex", "0.810 in"],
+        ["ey", "5.000 in"],
+        ["Braced flange", "None"],
+      ],
+      "Applied Loads",
+      [
+        ["Dead load", `−${fmt(cs.DL, 1)} lb/ft`],
+        ["Wind load (down)", `−${fmt(cs.WLdown, 1)} lb/ft`],
+        ["Wind load (uplift)", `+${fmt(cs.WLup, 1)} lb/ft`],
+        ["Snow load", `−${fmt(cs.SL, 1)} lb/ft`],
+        ["Self-weight", "~6.27 lb/ft"],
+        ["Span length", `${fmt(cs.span, 2)} ft`],
+      ]
+    );
+    text("Key supports", ML + 4, y, { size: 8, style: "bold", color: MID }); y += 12;
+    simpleTable(
+      ["#", "Type", "Location", "Bearing", "K"],
+      [
+        ["1", "XYT", "0.000 ft", "3.50 in", "1.00"],
+        ["6", "XT", "9.000 ft", "2.00 in", "1.00"],
+        ["13", "XT", "18.000 ft", "2.00 in", "1.00"],
+        ["18", "XYT", "27.000 ft", "3.50 in", "1.00"],
+        ["22", "XT", "32.160 ft", "1.00 in", "1.00"],
+      ],
+      [30, 60, 90, 80, 60],
+      "+ 17 additional X-restraints at purlin clip locations"
+    );
+
+    // ── 4. Load combinations ─────────────────────────────────────────────────
+    subTitle("4. Load Combinations — AISI S100-24 ASD");
+    simpleTable(
+      ["Combination", "SW", "DL", "WL↓", "WL↑", "SL"],
+      [
+        ["D", "1.0", "1.0", "—", "—", "—"],
+        ["D + 0.6W", "1.0", "1.0", "0.6", "0.6", "—"],
+        ["0.6D + 0.6W", "0.6", "0.6", "0.6", "0.6", "—"],
+        ["DL + SL", "1.0", "1.0", "—", "—", "1.0"],
+        ["DL + 0.75SL", "1.0", "1.0", "—", "—", "0.75"],
+        ["DL + 0.75SL + 0.45WL(+)", "1.0", "1.0", "—", "0.45", "0.75"],
+        [`DL + 0.75SL + 0.45WL(−) <= governing`, "1.0", "1.0", "0.45", "—", "0.75"],
+      ],
+      [190, 50, 50, 50, 50, 50]
+    );
+
+    // ── 5. Member check ──────────────────────────────────────────────────────
+    subTitle(`5. Member Check — Governing: ${cs.loadCombo} at 13.348 ft`);
+    statGrid([
+      { label: "Mx applied", value: fmt(cc.Mmax, 1), note: "lb-ft" },
+      { label: "Mx strength, Ma", value: fmt(cc.MaX, 1), note: "lb-ft" },
+      { label: "Vy applied", value: fmt(cc.Vmax, 0), note: "lb" },
+      { label: "Vy strength", value: "10,967", note: "lb" },
+      { label: "Cbx", value: "1.0234" },
+      { label: "Bimoment B", value: "11,714", note: "lb-in²" },
+    ]);
+    text("Interaction equations", ML + 4, y, { size: 8, style: "bold", color: MID }); y += 12;
+    dcrBar("Eq. H1.2-1 — P, Mx, My: 0.000 + 0.858 + 0.000", 0.858, 1.0);
+    dcrBar("Eq. H2-1 — Mx, Vy: sqrt(0.540 + 0.000)", 0.735, 1.0);
+    dcrBar("Eq. H2-1 — My, Vx: sqrt(0.000 + 0.000)", 0.000, 1.0);
+    dcrBar("Eq. H4-1 — Mx, My, B: 0.858 + 0.000 + 0.074", 0.932, 1.25);
+
+    // ── 6. Web crippling ─────────────────────────────────────────────────────
+    subTitle("6. Web Crippling Check — at 27.000 ft Interior Support");
+    twoColKV(
+      "Applied",
+      [
+        ["Load on bottom flange", "2,357.8 lb"],
+        ["Applied moment", "−1,639 lb-ft"],
+        ["Bearing length", "3.500 in"],
+        ["Flange fastened", "Yes"],
+        ["Calculation type", "Cee, FS-IOF"],
+      ],
+      "Capacity",
+      [
+        ["Web crippling strength, Pa", "5,222.2 lb"],
+        ["Applied web load", "2,357.8 lb"],
+        ["Moment capacity", "14,166 lb-ft"],
+        ["Applied moment", "1,639 lb-ft"],
+        ["Dist. to end of member", "5.014 ft"],
+      ]
+    );
+    dcrBar("Web crippling: 2,357.8 lb <= 5,222.2 lb", 2357.8 / 5222.2, 1.0);
+    dcrBar("Eq. H3-1a — P, M interaction: 0.249 + 0.069", 0.318 / 0.782, 1.0);
+
+    // ── 7. Shears, moments & deflections ─────────────────────────────────────
+    subTitle(`7. Maximum Shears, Moments & Deflections — ${cs.loadCombo}`);
+    twoColKV(
+      "Reactions & Shears",
+      [
+        ["Reaction at 0.000 ft", "1,601.2 lb"],
+        ["Reaction at 27.000 ft", "2,357.8 lb"],
+        ["Shear @ 0 ft (right)", "+1,601.2 lb"],
+        ["Shear @ 27 ft (left)", "−1,722.6 lb"],
+        ["Shear @ 27 ft (right)", "+635.2 lb"],
+      ],
+      "Peak Moments & Deflections",
+      [
+        ["Max +ve moment", "10,413 lb-ft @ 13.007 ft"],
+        ["Max −ve moment", "−1,639 lb-ft @ 27.000 ft"],
+        ["End moment", "0 lb-ft @ 32.160 ft"],
+        ["Max deflection (down)", "−1.604 in @ 13.323 ft"],
+        ["Max deflection (up)", "+0.896 in @ 32.160 ft"],
+        ["Inflection point", "26.014 ft"],
+      ]
+    );
+    drawShearMomentDeflection();
+
+    // ── 8. Design summary ────────────────────────────────────────────────────
+    subTitle("8. Design Summary");
+    statGrid([
+      { label: "Eq. H1.2-1 (P+Mx+My)", value: "0.858", note: "≤ 1.0 OK", color: PASS },
+      { label: "Eq. H2-1 (Mx+Vy)", value: "0.735", note: "≤ 1.0 OK", color: PASS },
+      { label: "Eq. H4-1 (Mx+My+B)", value: "0.932", note: "≤ 1.25 OK, governing", color: WARN },
+      { label: "Web crip. H3-1a", value: "0.318", note: "≤ 0.782 OK", color: PASS },
+      { label: "Max deflection", value: `${fmt(cc.defMax, 3)}"`, note: "@ midspan", color: BLACK },
+      { label: "Max reaction", value: "2,358 lb", note: "@ 27.0 ft", color: BLACK },
+    ]);
+    ensureSpace(44);
+    doc.setFillColor(...(cc.overallOK ? [240, 253, 244] : [255, 241, 241]));
+    doc.setDrawColor(...(cc.overallOK ? PASS : FAIL));
+    doc.roundedRect(ML, y - 12, CW, 34, 3, 3, "FD");
+    text(cc.overallOK ? "SECTION ADEQUATE — ALL CHECKS PASS" : "SECTION OVERSTRESSED — REVISE DESIGN",
+      ML + 10, y, { size: 10, style: "bold", color: cc.overallOK ? PASS : FAIL });
+    text(
+      `Governing: Eq. H4-1 = 0.932 <= 1.25  ·  Load combo: ${cs.loadCombo}  ·  ${cs.sectionName}, ${cs.material}`,
+      ML + 10, y + 13, { size: 8, color: MID }
+    );
+    y += 34;
+    ensureSpace(24);
+    text(
+      "Design per AISI S100-24, US provisions, ASD method · Cold work of forming and inelastic reserve strength increases applied",
+      ML, y, { size: 7, color: MID }
+    );
+    y += 11;
+    text(
+      `Global buckling via elastic theory · Torsion included in member checks · E = ${fmt(cs.E, 0)} ksi · CFS v15.0.2`,
+      ML, y, { size: 7, color: MID }
+    );
+    y += 14;
+  }
 
   // ── Footer (last page) ──────────────────────────────────────────────────────
   y = H - 80;

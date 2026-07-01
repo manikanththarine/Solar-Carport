@@ -58,6 +58,73 @@ function calcPnDSM(Py, Pcrl, Pcrd) {
   return { Pnl, Pnd, Pn: Math.min(Pnl, Pnd), λl, λd };
 }
 
+// ─── Shared CFS state defaults & derived-results calc ──────────────
+// Exported so the parent (Input_carports) can own this state and feed
+// the same computed values into generateStructuralPDF.
+export const defaultCFSState = {
+  sectionName: "Channel 10x3.5x0.75x0.0747",
+  H: 10, B: 3.5, D: 0.75, t: 0.0747,
+  Fy: 55, Fu: 65, E: 29500, material: "A653 HSLAS Grade 55",
+  DL: 10.8, WLdown: 129.3, WLup: 114.4, SL: 63.8, span: 27.0,
+  loadCombo: "DL+0.75SL+0.45WL(-)",
+};
+
+export function computeCFSResults(cfsState) {
+  const { H, B, D, t, Fy, Fu, E, DL, WLdown, WLup, SL, span, loadCombo } = cfsState;
+  const Ω = 1.67; // ASD factor for bending
+
+  const sp = calcSectionProps(H, B, D, t);
+  const A = sp.A;
+  const Sx = sp.Sx;
+  const Ix = sp.Ix;
+
+  const My = round(Fy * Sx / 12, 1);
+  const Py = round(Fy * A * 1000, 0);
+
+  const Mcrl = round(My * 1.53, 1);
+  const Mcrd = round(My * 1.01, 1);
+  const Pcrl = round(Py * 0.296, 0);
+  const Pcrd = round(Py * 0.435, 0);
+
+  const mxDSM = calcMnxDSM(My, Mcrl, Mcrd);
+  const pDSM = calcPnDSM(Py, Pcrl, Pcrd);
+  const MaX = round(mxDSM.Mn / Ω, 1);
+  const Pa = round(pDSM.Pn / Ω, 0);
+
+  const sw = 2.08;
+  let w = 0;
+  if (loadCombo === "D") w = sw + DL;
+  else if (loadCombo === "D+0.6W(-)") w = sw + DL + 0.6 * WLdown;
+  else if (loadCombo === "D+0.6W(+)") w = sw + DL - 0.6 * WLup;
+  else if (loadCombo === "0.6D+0.6W(+)") w = 0.6 * (sw + DL) - 0.6 * WLup;
+  else if (loadCombo === "DL+SL") w = sw + DL + SL;
+  else if (loadCombo === "DL+0.75SL") w = sw + DL + 0.75 * SL;
+  else if (loadCombo === "DL+0.75SL+0.45WL(-)") w = sw + DL + 0.75 * SL + 0.45 * WLdown;
+  else if (loadCombo === "DL+0.75SL+0.45WL(+)") w = sw + DL + 0.75 * SL - 0.45 * WLup;
+  w = round(w, 2);
+
+  const Mmax = round((w * span * span) / 8 / 12, 1);
+  const Vmax = round((w * span) / 2, 0);
+
+  const dcrM = round(Mmax / MaX, 3);
+  const dcrV = round(Vmax / (0.6 * Fy * sp.hw * t * 1000 / Ω), 3);
+
+  const wInLbIn = w / 12;
+  const spanIn = span * 12;
+  const defMax = round((5 * wInLbIn * Math.pow(spanIn, 4)) / (384 * E * Ix * 1000), 3);
+  const defLimit = round(spanIn / 240, 3);
+  const dcrDef = round(defMax / defLimit, 3);
+
+  const overallDCR = Math.max(dcrM, dcrV, dcrDef);
+  const overallOK = overallDCR <= 1.0;
+
+  return {
+    sp, A, Sx, Ix, My, Py, Mcrl, Mcrd, Pcrl, Pcrd,
+    mxDSM, pDSM, MaX, Pa, w, Mmax, Vmax, dcrM, dcrV,
+    defMax, defLimit, dcrDef, overallDCR, overallOK,
+  };
+}
+
 // ─── Section Properties for C-section ──────────────────────────────
 function calcSectionProps(H, B, D, t) {
   const r = t * 2;
@@ -224,94 +291,52 @@ const RptKV = ({ k, v, alt }) => (
 const TABS = ["Section", "Material", "Loads", "Results", "Report"];
 
 // ─── Main App ──────────────────────────────────────────────────────
-export default function CFSApp() {
+export default function CFSApp({ cfsState, setCfsState }) {
   const [tab, setTab] = useState("Section");
 
-  // Section inputs
-  const [H, setH] = useState(10);
-  const [B, setB] = useState(3.5);
-  const [D, setD] = useState(0.75);
-  const [t, setT] = useState(0.0747);
-  const [sectionName, setSectionName] = useState("Channel 10x3.5x0.75x0.0747");
+  const {
+    sectionName, H, B, D, t,
+    Fy, Fu, E, material,
+    DL, WLdown, WLup, SL, span, loadCombo,
+  } = cfsState;
 
-  // Material
-  const [Fy, setFy] = useState(55);
-  const [Fu, setFu] = useState(65);
-  const [E, setE] = useState(29500);
-  const [material, setMaterial] = useState("A653 HSLAS Grade 55");
-
-  // Loads (ASD)
-  const [DL, setDL] = useState(10.8);
-  const [WLdown, setWLdown] = useState(129.3);
-  const [WLup, setWLup] = useState(114.4);
-  const [SL, setSL] = useState(63.8);
-  const [span, setSpan] = useState(27.0);
-  const [loadCombo, setLoadCombo] = useState("DL+0.75SL+0.45WL(-)");
-
-  const Ω = 1.67; // ASD factor for bending
+  const update = useCallback(
+    (key) => (val) => setCfsState((prev) => ({ ...prev, [key]: val })),
+    [setCfsState]
+  );
+  const setSectionName = update("sectionName");
+  const setH = update("H");
+  const setB = update("B");
+  const setD = update("D");
+  const setT = update("t");
+  const setFy = update("Fy");
+  const setFu = update("Fu");
+  const setE = update("E");
+  const setMaterial = update("material");
+  const setDL = update("DL");
+  const setWLdown = update("WLdown");
+  const setWLup = update("WLup");
+  const setSL = update("SL");
+  const setSpan = update("span");
+  const setLoadCombo = update("loadCombo");
 
   // Section props
   const sp = calcSectionProps(H, B, D, t);
-  const A = sp.A;
-  const Sx = sp.Sx;
-  const Ix = sp.Ix;
 
-  // Yield values
-  const My = round(Fy * Sx / 12, 1); // lb-ft
-  const Py = round(Fy * A * 1000, 0); // lb (if Fy in ksi, A in², Py in lb)
-
-  // Approximate elastic buckling (simplified for demo)
-  const Mcrl = round(My * 1.53, 1);
-  const Mcrd = round(My * 1.01, 1);
-  const Pcrl = round(Py * 0.296, 0);
-  const Pcrd = round(Py * 0.435, 0);
-
-  // DSM results
-  const mxDSM = calcMnxDSM(My, Mcrl, Mcrd);
-  const pDSM = calcPnDSM(Py, Pcrl, Pcrd);
-  const MaX = round(mxDSM.Mn / Ω, 1); // Allowable moment
-  const Pa = round(pDSM.Pn / Ω, 0);
-
-  // Applied loads from combo
-  const comboLoads = useCallback(() => {
-    const sw = 2.08; // self weight lb/ft estimate
-    let w = 0;
-    if (loadCombo === "D") w = sw + DL;
-    else if (loadCombo === "D+0.6W(-)") w = sw + DL + 0.6 * WLdown;
-    else if (loadCombo === "D+0.6W(+)") w = sw + DL - 0.6 * WLup;
-    else if (loadCombo === "0.6D+0.6W(+)") w = 0.6 * (sw + DL) - 0.6 * WLup;
-    else if (loadCombo === "DL+SL") w = sw + DL + SL;
-    else if (loadCombo === "DL+0.75SL") w = sw + DL + 0.75 * SL;
-    else if (loadCombo === "DL+0.75SL+0.45WL(-)") w = sw + DL + 0.75 * SL + 0.45 * WLdown;
-    else if (loadCombo === "DL+0.75SL+0.45WL(+)") w = sw + DL + 0.75 * SL - 0.45 * WLup;
-    return round(w, 2);
-  }, [loadCombo, DL, WLdown, WLup, SL]);
-
-  const w = comboLoads();
-  const Mmax = round((w * span * span) / 8 / 12, 1); // lb-ft (simple span approx)
-  const Vmax = round((w * span) / 2, 0);
-
-  const dcrM = round(Mmax / MaX, 3);
-  const dcrV = round(Vmax / (0.6 * Fy * sp.hw * t * 1000 / Ω), 3);
-
-  // Deflection
-  const wInLbIn = w / 12;
-  const spanIn = span * 12;
-  const defMax = round((5 * wInLbIn * Math.pow(spanIn, 4)) / (384 * E * Ix * 1000), 3);
-  const defLimit = round(spanIn / 240, 3);
-  const dcrDef = round(defMax / defLimit, 3);
-
-  const overallDCR = Math.max(dcrM, dcrV, dcrDef);
-  const overallOK = overallDCR <= 1.0;
+  const {
+    A, Sx, Ix, My, Py, Mcrl, Mcrd, Pcrl, Pcrd,
+    mxDSM, pDSM, MaX, Pa, w, Mmax, Vmax, dcrM, dcrV,
+    defMax, defLimit, dcrDef, overallDCR, overallOK,
+  } = computeCFSResults(cfsState);
 
   // ─── Render ──────────────────────────────────────────────────────
   return (
     <div style={{ minHeight: "100vh", background: T.bg, fontFamily: "'Inter', 'Segoe UI', sans-serif" }}>
       {/* Header */}
-      <div style={{ background: `linear-gradient(135deg, ${T.navy} 0%, ${T.navyLight} 100%)`, color: "#fff", padding: "0 32px" }}>
+      {/* <div style={{ background: `linear-gradient(135deg, ${T.navy} 0%, ${T.navyLight} 100%)`, color: "#fff", padding: "0 32px" }}>
         <div style={{ maxWidth: 1100, margin: "0 auto" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 16, paddingTop: 20, paddingBottom: 12 }}>
-            {/* Logo mark */}
+            {/* Logo mark 
             <div style={{ width: 44, height: 44, background: T.amber, borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
               <svg width="26" height="26" viewBox="0 0 26 26">
                 <rect x="10" y="2" width="3" height="22" fill={T.navy} />
@@ -340,21 +365,21 @@ export default function CFSApp() {
               </div>
             </div>
           </div>
-          {/* Tabs */}
-          <div style={{ display: "flex", gap: 0 }}>
-            {TABS.map(t => (
-              <button key={t} onClick={() => setTab(t)} style={{
-                padding: "10px 22px", background: "none", border: "none",
-                borderBottom: tab === t ? `3px solid ${T.amber}` : "3px solid transparent",
-                color: tab === t ? "#fff" : "rgba(255,255,255,0.5)",
-                fontWeight: tab === t ? 700 : 400, fontSize: 13,
-                cursor: "pointer", transition: "all 0.15s", letterSpacing: "0.02em"
-              }}>{t}</button>
-            ))}
-          </div>
+          {/* Tabs 
+         
         </div>
+      </div> */}
+      <div style={{ display: "flex", gap: 0 ,background: T.navyMid, padding: "0 32px", borderBottom: `1px solid ${T.borderLight}` }}>
+        {TABS.map(t => (
+          <button key={t} onClick={() => setTab(t)} style={{
+            padding: "10px 22px", background: "none", border: "none",
+            borderBottom: tab === t ? `3px solid ${T.amber}` : "3px solid transparent",
+            color: tab === t ? "#fff" : "rgba(255,255,255,0.5)",
+            fontWeight: tab === t ? 700 : 400, fontSize: 13,
+            cursor: "pointer", transition: "all 0.15s", letterSpacing: "0.02em"
+          }}>{t}</button>
+        ))}
       </div>
-
       {/* Body */}
       <div style={{ maxWidth: 1100, margin: "0 auto", padding: "28px 32px" }}>
 
@@ -698,18 +723,18 @@ export default function CFSApp() {
                   <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
                     <thead>
                       <tr style={{ background: T.surfaceAlt }}>
-                        {["#","Length","Angle","R (in)","Web"].map(h => (
+                        {["#", "Length", "Angle", "R (in)", "Web"].map(h => (
                           <th key={h} style={{ padding: "5px 8px", textAlign: "left", fontSize: 10, textTransform: "uppercase", letterSpacing: "0.05em", color: T.textLight, borderBottom: `1px solid ${T.borderLight}` }}>{h}</th>
                         ))}
                       </tr>
                     </thead>
                     <tbody>
                       {[
-                        ["1","0.713\"","270°","0.188","None"],
-                        ["2","3.426\"","180°","0.188","Single"],
-                        ["3","10.000\"","90°","0.188","Cee"],
-                        ["4","3.426\"","0°","0.188","Single"],
-                        ["5","0.713\"","−90°","0.188","None"],
+                        ["1", "0.713\"", "270°", "0.188", "None"],
+                        ["2", "3.426\"", "180°", "0.188", "Single"],
+                        ["3", "10.000\"", "90°", "0.188", "Cee"],
+                        ["4", "3.426\"", "0°", "0.188", "Single"],
+                        ["5", "0.713\"", "−90°", "0.188", "None"],
                       ].map((row, i) => (
                         <tr key={i} style={{ background: i % 2 === 0 ? T.surfaceAlt : T.surface }}>
                           {row.map((cell, j) => (
@@ -773,25 +798,25 @@ export default function CFSApp() {
               <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
                 <thead>
                   <tr style={{ background: T.surfaceAlt }}>
-                    {["Buckling Mode","Magnitude","Stress (ksi)","Stress/Yield","Half-wave (ft)","αs"].map(h => (
+                    {["Buckling Mode", "Magnitude", "Stress (ksi)", "Stress/Yield", "Half-wave (ft)", "αs"].map(h => (
                       <th key={h} style={{ padding: "6px 10px", textAlign: "left", fontSize: 10, textTransform: "uppercase", letterSpacing: "0.05em", color: T.textLight, borderBottom: `1px solid ${T.border}` }}>{h}</th>
                     ))}
                   </tr>
                 </thead>
                 <tbody>
                   {[
-                    ["Pcrl","30,004 lb","16.27","0.2958","0.643","—"],
-                    ["Pcrd","44,063 lb","23.90","0.4345","1.862","—"],
-                    ["Mcrlx⁺","39,420 lb-ft","84.18","1.5306","0.473","1.00"],
-                    ["Mcrdx⁺","26,014 lb-ft","55.55","1.0101","2.003","1.00"],
-                    ["Mcrlx⁻","39,420 lb-ft","84.18","1.5306","0.473","1.00"],
-                    ["Mcrdx⁻","26,014 lb-ft","55.55","1.0101","2.003","1.00"],
-                    ["Mcrly⁺","27,167 lb-ft","303.51","5.5183","0.253","1.00"],
-                    ["Mcrdy⁺","6,935 lb-ft","77.48","1.4087","2.153","0.00"],
-                    ["Mcrly⁻","4,297 lb-ft","48.00","0.8727","0.635","1.00"],
-                    ["Mcrdy⁻","— N/A —","—","—","—","—"],
-                    ["Bcrw⁺/⁻","678,485 lb-in²","170.44","3.0988","0.459","—"],
-                    ["Bcrf⁺/⁻","407,390 lb-in²","102.34","1.8607","2.025","—"],
+                    ["Pcrl", "30,004 lb", "16.27", "0.2958", "0.643", "—"],
+                    ["Pcrd", "44,063 lb", "23.90", "0.4345", "1.862", "—"],
+                    ["Mcrlx⁺", "39,420 lb-ft", "84.18", "1.5306", "0.473", "1.00"],
+                    ["Mcrdx⁺", "26,014 lb-ft", "55.55", "1.0101", "2.003", "1.00"],
+                    ["Mcrlx⁻", "39,420 lb-ft", "84.18", "1.5306", "0.473", "1.00"],
+                    ["Mcrdx⁻", "26,014 lb-ft", "55.55", "1.0101", "2.003", "1.00"],
+                    ["Mcrly⁺", "27,167 lb-ft", "303.51", "5.5183", "0.253", "1.00"],
+                    ["Mcrdy⁺", "6,935 lb-ft", "77.48", "1.4087", "2.153", "0.00"],
+                    ["Mcrly⁻", "4,297 lb-ft", "48.00", "0.8727", "0.635", "1.00"],
+                    ["Mcrdy⁻", "— N/A —", "—", "—", "—", "—"],
+                    ["Bcrw⁺/⁻", "678,485 lb-in²", "170.44", "3.0988", "0.459", "—"],
+                    ["Bcrf⁺/⁻", "407,390 lb-in²", "102.34", "1.8607", "2.025", "—"],
                   ].map((row, i) => (
                     <tr key={i} style={{ background: i % 2 === 0 ? T.surfaceAlt : T.surface }}>
                       {row.map((cell, j) => (
@@ -809,16 +834,16 @@ export default function CFSApp() {
                 <div>
                   <RptSubHd>General parameters</RptSubHd>
                   {[
-                    ["Orientation","Horizontal"],
-                    ["Global buckling","Elastic theory"],
-                    ["Include torsion","Yes"],
-                    ["Lx","27.000 ft"],
-                    ["Ly","3.550 ft"],
-                    ["Lt","9.000 ft"],
-                    ["Kx / Ky / Kt","1.00 / 1.00 / 1.00"],
-                    ["ex","0.810 in"],
-                    ["ey","5.000 in"],
-                    ["Braced flange","None"],
+                    ["Orientation", "Horizontal"],
+                    ["Global buckling", "Elastic theory"],
+                    ["Include torsion", "Yes"],
+                    ["Lx", "27.000 ft"],
+                    ["Ly", "3.550 ft"],
+                    ["Lt", "9.000 ft"],
+                    ["Kx / Ky / Kt", "1.00 / 1.00 / 1.00"],
+                    ["ex", "0.810 in"],
+                    ["ey", "5.000 in"],
+                    ["Braced flange", "None"],
                   ].map(([k, v], i) => <RptKV key={k} k={k} v={v} alt={i % 2 === 0} />)}
                 </div>
                 <div>
@@ -835,18 +860,18 @@ export default function CFSApp() {
                   <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
                     <thead>
                       <tr style={{ background: T.surfaceAlt }}>
-                        {["#","Type","Location","Bearing","K"].map(h => (
+                        {["#", "Type", "Location", "Bearing", "K"].map(h => (
                           <th key={h} style={{ padding: "5px 8px", textAlign: "left", fontSize: 10, textTransform: "uppercase", letterSpacing: "0.05em", color: T.textLight, borderBottom: `1px solid ${T.borderLight}` }}>{h}</th>
                         ))}
                       </tr>
                     </thead>
                     <tbody>
                       {[
-                        ["1","XYT","0.000 ft","3.50 in","1.00"],
-                        ["6","XT","9.000 ft","2.00 in","1.00"],
-                        ["13","XT","18.000 ft","2.00 in","1.00"],
-                        ["18","XYT","27.000 ft","3.50 in","1.00"],
-                        ["22","XT","32.160 ft","1.00 in","1.00"],
+                        ["1", "XYT", "0.000 ft", "3.50 in", "1.00"],
+                        ["6", "XT", "9.000 ft", "2.00 in", "1.00"],
+                        ["13", "XT", "18.000 ft", "2.00 in", "1.00"],
+                        ["18", "XYT", "27.000 ft", "3.50 in", "1.00"],
+                        ["22", "XT", "32.160 ft", "1.00 in", "1.00"],
                       ].map((row, i) => (
                         <tr key={i} style={{ background: i % 2 === 0 ? T.surfaceAlt : T.surface }}>
                           {row.map((cell, j) => (
@@ -866,20 +891,20 @@ export default function CFSApp() {
               <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
                 <thead>
                   <tr style={{ background: T.surfaceAlt }}>
-                    {["Combination","SW","DL","WL↓","WL↑","SL"].map(h => (
+                    {["Combination", "SW", "DL", "WL↓", "WL↑", "SL"].map(h => (
                       <th key={h} style={{ padding: "6px 10px", textAlign: "left", fontSize: 10, textTransform: "uppercase", letterSpacing: "0.05em", color: T.textLight, borderBottom: `1px solid ${T.border}` }}>{h}</th>
                     ))}
                   </tr>
                 </thead>
                 <tbody>
                   {[
-                    ["D","1.0","1.0","—","—","—", false],
-                    ["D + 0.6W","1.0","1.0","0.6","0.6","—", false],
-                    ["0.6D + 0.6W","0.6","0.6","0.6","0.6","—", false],
-                    ["DL + SL","1.0","1.0","—","—","1.0", false],
-                    ["DL + 0.75SL","1.0","1.0","—","—","0.75", false],
-                    ["DL + 0.75SL + 0.45WL(+)","1.0","1.0","—","0.45","0.75", false],
-                    ["DL + 0.75SL + 0.45WL(−)  ← governing","1.0","1.0","0.45","—","0.75", true],
+                    ["D", "1.0", "1.0", "—", "—", "—", false],
+                    ["D + 0.6W", "1.0", "1.0", "0.6", "0.6", "—", false],
+                    ["0.6D + 0.6W", "0.6", "0.6", "0.6", "0.6", "—", false],
+                    ["DL + SL", "1.0", "1.0", "—", "—", "1.0", false],
+                    ["DL + 0.75SL", "1.0", "1.0", "—", "—", "0.75", false],
+                    ["DL + 0.75SL + 0.45WL(+)", "1.0", "1.0", "—", "0.45", "0.75", false],
+                    ["DL + 0.75SL + 0.45WL(−)  ← governing", "1.0", "1.0", "0.45", "—", "0.75", true],
                   ].map(([combo, sw, dl, wld, wlu, sl, gov], i) => (
                     <tr key={i} style={{ background: gov ? `${T.amber}18` : i % 2 === 0 ? T.surfaceAlt : T.surface }}>
                       <td style={{ padding: "6px 10px", fontFamily: gov ? "inherit" : "monospace", fontWeight: gov ? 700 : 400, fontSize: 12, color: gov ? T.amberDark : T.text, borderBottom: `1px solid ${T.borderLight}` }}>{combo}</td>
@@ -940,20 +965,20 @@ export default function CFSApp() {
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 14 }}>
                 <div>
                   {[
-                    ["Load on bottom flange","2,357.8 lb"],
-                    ["Applied moment","−1,639 lb-ft"],
-                    ["Bearing length","3.500 in"],
-                    ["Flange fastened","Yes"],
-                    ["Calculation type","Cee, FS-IOF"],
+                    ["Load on bottom flange", "2,357.8 lb"],
+                    ["Applied moment", "−1,639 lb-ft"],
+                    ["Bearing length", "3.500 in"],
+                    ["Flange fastened", "Yes"],
+                    ["Calculation type", "Cee, FS-IOF"],
                   ].map(([k, v], i) => <RptKV key={k} k={k} v={v} alt={i % 2 === 0} vColor={v === "Yes" ? T.pass : undefined} />)}
                 </div>
                 <div>
                   {[
-                    ["Web crippling strength, Pa","5,222.2 lb"],
-                    ["Applied web load","2,357.8 lb"],
-                    ["Moment capacity","14,166 lb-ft"],
-                    ["Applied moment","1,639 lb-ft"],
-                    ["Dist. to end of member","5.014 ft"],
+                    ["Web crippling strength, Pa", "5,222.2 lb"],
+                    ["Applied web load", "2,357.8 lb"],
+                    ["Moment capacity", "14,166 lb-ft"],
+                    ["Applied moment", "1,639 lb-ft"],
+                    ["Dist. to end of member", "5.014 ft"],
                   ].map(([k, v], i) => <RptKV key={k} k={k} v={v} alt={i % 2 === 0} />)}
                 </div>
               </div>
@@ -984,22 +1009,22 @@ export default function CFSApp() {
                 <div>
                   <RptSubHd>Reactions & shears</RptSubHd>
                   {[
-                    ["Reaction at 0.000 ft","1,601.2 lb"],
-                    ["Reaction at 27.000 ft","2,357.8 lb"],
-                    ["Shear @ 0 ft (right)","+1,601.2 lb"],
-                    ["Shear @ 27 ft (left)","−1,722.6 lb"],
-                    ["Shear @ 27 ft (right)","+635.2 lb"],
+                    ["Reaction at 0.000 ft", "1,601.2 lb"],
+                    ["Reaction at 27.000 ft", "2,357.8 lb"],
+                    ["Shear @ 0 ft (right)", "+1,601.2 lb"],
+                    ["Shear @ 27 ft (left)", "−1,722.6 lb"],
+                    ["Shear @ 27 ft (right)", "+635.2 lb"],
                   ].map(([k, v], i) => <RptKV key={k} k={k} v={v} alt={i % 2 === 0} />)}
                 </div>
                 <div>
                   <RptSubHd>Peak moments & deflections</RptSubHd>
                   {[
-                    ["Max +ve moment","10,413 lb-ft @ 13.007 ft"],
-                    ["Max −ve moment","−1,639 lb-ft @ 27.000 ft"],
-                    ["End moment","0 lb-ft @ 32.160 ft"],
-                    ["Max deflection (down)","−1.604 in @ 13.323 ft"],
-                    ["Max deflection (up)","+0.896 in @ 32.160 ft"],
-                    ["Inflection point","26.014 ft"],
+                    ["Max +ve moment", "10,413 lb-ft @ 13.007 ft"],
+                    ["Max −ve moment", "−1,639 lb-ft @ 27.000 ft"],
+                    ["End moment", "0 lb-ft @ 32.160 ft"],
+                    ["Max deflection (down)", "−1.604 in @ 13.323 ft"],
+                    ["Max deflection (up)", "+0.896 in @ 32.160 ft"],
+                    ["Inflection point", "26.014 ft"],
                   ].map(([k, v], i) => <RptKV key={k} k={k} v={v} alt={i % 2 === 0} />)}
                 </div>
               </div>
