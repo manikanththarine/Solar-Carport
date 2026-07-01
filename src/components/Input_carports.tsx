@@ -842,14 +842,20 @@ const EngineeringInputForm: React.FC = () => {
             <div className="flex items-center gap-3">
               <button
                 onClick={() => setShowCFSDesigner(true)}
-                className="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2 rounded-lg font-medium transition"
+                className={`px-5 py-2 rounded-lg font-medium transition ${showCFSDesigner
+                    ? "bg-blue-600 text-white"
+                    : "bg-gray-200 text-gray-700 hover:bg-gray-300"
+                  }`}
               >
                 CFS Designer
               </button>
 
               <button
                 onClick={() => setShowCFSDesigner(false)}
-                className="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2 rounded-lg font-medium transition"
+                className={`px-5 py-2 rounded-lg font-medium transition ${!showCFSDesigner
+                    ? "bg-blue-600 text-white"
+                    : "bg-gray-200 text-gray-700 hover:bg-gray-300"
+                  }`}
               >
                 Engineering Form
               </button>
